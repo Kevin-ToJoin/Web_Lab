@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Calendar, FileText, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,6 +32,7 @@ export const HealthcareApp = () => {
       // BUG: Used || instead of &&. So anyone with a condition gets $30, even if they are 20! 
       // And a 65 year old with a condition gets $30 instead of $20!
       setCopay(30);
+    // eslint-disable-next-line no-dupe-else-if
     } else if (ageNum >= 65 && hasCondition) {
       // Unreachable code due to previous bug
       setCopay(20);
