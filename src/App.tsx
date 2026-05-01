@@ -1,8 +1,8 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight } from 'lucide-react';
 import './index.css';
-import { CatalogApp } from './apps/CatalogApp';
+import { CatalogAppV01 } from './apps/catalog-v01';
 import { EcommerceApp } from './apps/EcommerceApp';
 import { BankApp } from './apps/BankApp';
 import { HealthcareApp } from './apps/HealthcareApp';
@@ -130,7 +130,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainMenu />} />
-        <Route path="/catalog" element={<CatalogApp />} />
+        <Route path="/catalog/*" element={<CatalogAppV01 />} />
         <Route path="/ecommerce" element={<EcommerceApp />} />
         <Route path="/bank" element={<BankApp />} />
         <Route path="/healthcare" element={<HealthcareApp />} />

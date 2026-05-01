@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, ShoppingCart, Trash2, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,7 +14,6 @@ export const EcommerceApp = () => {
   const [cart, setCart] = useState(PRODUCTS.map(p => ({ ...p, quantity: 0 })));
   const [address, setAddress] = useState('');
   const [checkoutStatus, setCheckoutStatus] = useState('');
-  const [staleTotal, setStaleTotal] = useState(0);
 
   const updateQuantity = (id: number, delta: number) => {
     setCart(prev => prev.map(item => {
@@ -33,17 +32,7 @@ export const EcommerceApp = () => {
     // until another quantity change happens, because staleTotal is calculated in a weird way.
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
-  // Intentional bad practice for Bug Level 5
-  useEffect(() => {
-    // Only updates when subtotal changes natively through quantity, but we broke it for removeItem by not making it depend on cart properly (simulated)
-    setStaleTotal(subtotal);
-  }, [cart]); // Wait, if I use [cart], it will update. To make it truly buggy:
-  
-  // Let's rewrite Bug Level 5: Cart total doesn't update immediately when removing an item.
-  // We will manage total separately and only update it on specific actions.
-  
   // Re-implementing Bug Level 5:
   const [calculatedTotal, setCalculatedTotal] = useState(0);
   const [itemCount, setItemCount] = useState(0);
@@ -53,12 +42,14 @@ export const EcommerceApp = () => {
     const activeItems = cart.filter(i => i.quantity !== 0);
     if (activeItems.length < itemCount) {
       // Bug: If an item was fully removed, skip recalculation (simulating a stale cache)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setItemCount(activeItems.length);
       return; 
     }
     
     setCalculatedTotal(cart.reduce((acc, item) => acc + item.price * item.quantity, 0));
     setItemCount(activeItems.length);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart]);
 
 
