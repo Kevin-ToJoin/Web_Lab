@@ -11,7 +11,7 @@ import { CategoryView } from './pages/CategoryView';
 import { SearchResults } from './pages/SearchResults';
 import { ProductDetail } from './pages/ProductDetail';
 import { ReviewsView } from './pages/ReviewsView';
-import { ShoppingCart } from './pages/ShoppingCart';
+import { CartPage } from './pages/CartPage';
 import { CheckoutShipping } from './pages/CheckoutShipping';
 import { CheckoutPayment } from './pages/CheckoutPayment';
 import { OrderConfirmation } from './pages/OrderConfirmation';
@@ -29,7 +29,7 @@ export const CatalogAppV02 = () => {
               <Route path="search" element={<SearchResults />} />
               <Route path="product/:id" element={<ProductDetail />} />
               <Route path="product/:id/reviews" element={<ReviewsView />} />
-              <Route path="cart" element={<ShoppingCart />} />
+              <Route path="cart" element={<CartPage />} />
               <Route path="checkout/shipping" element={<CheckoutShipping />} />
               <Route path="checkout/payment" element={<CheckoutPayment />} />
               <Route path="checkout/success" element={<OrderConfirmation />} />
