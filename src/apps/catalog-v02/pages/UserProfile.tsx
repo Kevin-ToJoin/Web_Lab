@@ -10,30 +10,51 @@ export const UserProfile = () => {
   useEffect(() => {
     setRequirements(`## User Profile
 ### Acceptance Criteria:
-- Must display user's personal info securely.
-- Must list past orders.
-- **Bug Hint:** Look at the DB view. Is PII (Personally Identifiable Information) or password hashes being leaked to the frontend?`);
+- Must display user's name and email address.
+- The API response must **not** include sensitive fields like password hashes or internal flags.
+- Clicking "Save Changes" must send a PUT request and show a success/error message.
+- The **Orders** tab must display the user's past order history from the DB.
+- The **Settings** tab must be navigable and functional.
+- All sidebar tabs must change the content panel when clicked.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 9 (Security):** Click the API tab and call \`GET /api/v1/users/me\`. Inspect the response — what sensitive fields are being sent to the frontend that should never leave the server?
+- 🐛 **Level 2 (Broken UI):** Click the "Save Changes" button. Does anything happen? Is there a success message, an error, or nothing at all? Check the Network/API tab.
+- 🐛 **Level 2 (Broken UI):** Click the "Orders" and "Settings" tabs in the sidebar. Do they change the content panel? Can you see your past orders from the DB?
+
+### Security Rule:
+The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal user IDs to the frontend. These must be stripped server-side before sending the response.`);
 
     setDbTables({
       'Users_Table': [
-        { 
-          id: 'U-123', 
-          name: 'Jane Doe', 
+        {
+          id: 'U-123',
+          name: 'Jane Doe',
           email: 'jane@example.com',
-          // Level 9 Security Bug: Leaking password hash to frontend!
-          passwordHash: '$2b$12$L7p.tH6.R/b8T2H...xyz', 
-          isAdmin: false
+          passwordHash: '$2b$12$L7p.tH6.R/b8T2H...xyz',  // Should NEVER reach frontend
+          isAdmin: false,
+          createdAt: '2022-06-15T08:00:00Z'
+        }
+      ],
+      'API_Safe_Response': [
+        {
+          note: 'Only these fields should be sent to frontend:',
+          id: 'U-123',
+          name: 'Jane Doe',
+          email: 'jane@example.com'
         }
       ],
       'Past_Orders': [
-        { id: 'ORD-101', date: '2023-01-15', total: 145.50 },
-        { id: 'ORD-102', date: '2023-04-22', total: 89.99 }
+        { id: 'ORD-101', date: '2023-01-15', total: 145.50, status: 'Delivered' },
+        { id: 'ORD-102', date: '2023-04-22', total: 89.99, status: 'Delivered' },
+        { id: 'ORD-103', date: '2024-02-10', total: 299.00, status: 'Processing' }
       ]
     });
 
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/users/me', description: 'Fetches the current user profile data.' },
-      { method: 'PUT', path: '/api/v1/users/me', description: 'Updates user profile.', payloadTemplate: '{\n  "name": "Jane Doe"\n}' }
+      { method: 'GET', path: '/api/v1/users/me', description: 'Fetches current user profile. Check the response for fields that should not be exposed.' },
+      { method: 'PUT', path: '/api/v1/users/me', description: 'Updates user name/email. Should return 200 with updated user and display a success toast.', payloadTemplate: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}' },
+      { method: 'GET', path: '/api/v1/users/me/orders', description: 'Returns past orders. Should be called when the Orders tab is clicked.' }
     ]);
   }, [setRequirements, setDbTables, setApiEndpoints]);
 
