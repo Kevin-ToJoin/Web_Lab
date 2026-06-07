@@ -110,13 +110,13 @@ Total    = Subtotal - Discount + Tax
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                      <span style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                      <button type="button" aria-label={`Decrease quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
+                      <span aria-live="polite" aria-label={`Quantity: ${item.quantity}`} style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                      <button type="button" aria-label={`Increase quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
                     </div>
-                    
-                    <button className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
-                      <Trash2 size={16} />
+
+                    <button type="button" aria-label={`Remove ${item.name} from cart`} className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -167,8 +167,8 @@ Total    = Subtotal - Discount + Tax
                 onChange={(e) => setPromoCode(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <button className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
-                <Tag size={18} />
+              <button type="button" aria-label="Apply promo code" className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
+                <Tag size={18} aria-hidden="true" />
               </button>
             </div>
           </div>

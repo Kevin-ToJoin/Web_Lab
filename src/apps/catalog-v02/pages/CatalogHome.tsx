@@ -8,6 +8,7 @@ export const CatalogHome = () => {
   const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 1. Inject Requirements
@@ -51,7 +52,11 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
     ]);
 
     // Fetch data
-    MockAPI.getProducts().then(data => setFeatured(data.slice(0, 3)));
+    setLoading(true);
+    MockAPI.getProducts().then(data => {
+      setFeatured(data.slice(0, 3));
+      setLoading(false);
+    });
   }, [setRequirements, setDbTables, setApiEndpoints]);
 
   return (
@@ -98,15 +103,27 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
         </div>
       </div>
 
-      <div className="grid-cards">
-        {featured.map(p => (
-          <div key={p.id} className="glass-panel" style={{ padding: '1.5rem' }}>
-            <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '1rem' }} />
-            <h4 style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigate(`/catalog/product/${p.id}`)}>{p.name}</h4>
-            <div style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>${p.price.toFixed(2)}</div>
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid-cards" aria-busy="true" aria-label="Loading featured products">
+          {[1, 2, 3].map(n => (
+            <div key={n} className="glass-panel" style={{ padding: '1.5rem' }}>
+              <div className="skeleton" style={{ width: '100%', height: '150px', borderRadius: '4px', marginBottom: '1rem' }} />
+              <div className="skeleton" style={{ width: '70%', height: '1rem', marginBottom: '0.5rem' }} />
+              <div className="skeleton" style={{ width: '30%', height: '1rem' }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid-cards">
+          {featured.map(p => (
+            <div key={p.id} className="glass-panel" style={{ padding: '1.5rem' }}>
+              <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '1rem' }} />
+              <h4 style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigate(`/catalog/product/${p.id}`)}>{p.name}</h4>
+              <div style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>${p.price.toFixed(2)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
