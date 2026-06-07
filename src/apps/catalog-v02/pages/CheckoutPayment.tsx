@@ -13,17 +13,44 @@ export const CheckoutPayment = () => {
   useEffect(() => {
     setRequirements(`## Checkout: Payment
 ### Acceptance Criteria:
-- Must charge the exact amount matching the Cart total.
-- Credit Card must pass Luhn algorithm (or simulated regex).
-- Upon success, redirects to confirmation.
-- **Bug Hint:** Does the payment gateway get called multiple times if you double click fast?`);
+- The charged amount must exactly match the Cart total (no rounding or modification).
+- Card number must be 16 digits and pass the **Luhn algorithm** check.
+- Expiry date must be in MM/YY format and must not be in the past.
+- CVC must be exactly 3 digits.
+- The "Authorize Payment" button must be **disabled** while a payment request is processing to prevent double charges.
+- On success, redirect to the Order Confirmation page.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 4 (Equivalence):** Enter a clearly invalid card number like \`1234 5678 9012 3456\` or \`0000 0000 0000 0000\`. Does the form reject it?
+- 🐛 **Level 4 (Equivalence):** Leave the Expiry and CVC fields empty and click Authorize. Does validation fire?
+- 🐛 **Level 8 (Race Condition):** Click the "Authorize Payment" button **twice very quickly**. Check the Transactions Ledger — how many charge requests were sent?
+
+### Expected Card Validation:
+\`\`\`
+Card:   16 digits, Luhn-valid  (e.g. 4532015112830366 ✓)
+Expiry: MM/YY, not in past     (e.g. 12/99 ✓, 01/20 ✗)
+CVC:    exactly 3 digits       (e.g. 123 ✓, abc ✗)
+\`\`\``);
 
     setDbTables({
-      'Transactions_Ledger': []
+      'Transactions_Ledger': [
+        { note: 'No transactions yet — each successful "Authorize Payment" click should add one entry here.' }
+      ],
+      'Payment_Rules': [
+        { field: 'card_number', rule: '16 digits, Luhn algorithm' },
+        { field: 'expiry', rule: 'MM/YY format, must be future date' },
+        { field: 'cvc', rule: 'exactly 3 numeric digits' },
+        { field: 'amount', rule: `must equal cart total: $${total.toFixed(2)}` }
+      ]
     });
 
     setApiEndpoints([
-      { method: 'POST', path: '/api/v1/payment/charge', description: 'Charges the credit card.', payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card}"\n}` }
+      {
+        method: 'POST',
+        path: '/api/v1/payment/charge',
+        description: 'Initiates the payment charge. Should only be called once per order. Each click of "Authorize Payment" triggers one call.',
+        payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card || ''}",\n  "expiry": "MM/YY",\n  "cvc": ""\n}`
+      }
     ]);
   }, [total, card, setRequirements, setDbTables, setApiEndpoints]);
 

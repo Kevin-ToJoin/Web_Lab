@@ -8,33 +8,55 @@ export const CatalogHome = () => {
   const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 1. Inject Requirements
     setRequirements(`## Catalog Dashboard (Home)
 ### Acceptance Criteria:
-- Must display exactly 3 featured items.
-- "Shop by Category" must link to valid category filters.
-- Search bar must redirect to the Search Results page with the query in the URL.
-- **Bug Hint:** Look for hardcoded state or missing navigation links.`);
+- Must display **exactly 3** featured products.
+- "Shop by Category" buttons must navigate to the correct filtered category view.
+- The search bar must redirect to Search Results with the query in the URL (\`?q=term\`).
+- The hero banner "Shop Now" button must navigate to a relevant page.
+- Product names and descriptions must contain no typos or placeholder text.
+- Inactive promotions must NOT be displayed to users.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 1:** Inspect the product cards carefully — do any descriptions look like placeholder text?
+- 🐛 **Level 1:** Try clicking the "Shop Now" button in the hero banner. What happens?
+- 🐛 **Level 1:** Trigger a search by typing something and pressing a key that isn't Enter. Does the search fire?
+
+### DB Cross-check:
+Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\`. Is the "Up to 50% off" banner correct?`);
 
     // 2. Inject DB Tables
     setDbTables({
       'Featured_Promos': [
-        { id: 'promo1', active: true, discount: '20%' },
-        { id: 'promo2', active: false, discount: '50%' }
+        { id: 'promo1', active: true, discount: '20%', label: 'Spring Sale' },
+        { id: 'promo2', active: false, discount: '50%', label: 'Summer Clearance' }
       ],
-      'Products_Table_Preview': database.products.slice(0, 2)
+      'Products_Table_Preview': database.products.slice(0, 3),
+      'Categories_Table': [
+        { id: 'CAT-1', name: 'Electronics', productCount: database.products.filter(p => p.category === 'Electronics').length },
+        { id: 'CAT-2', name: 'Home Goods', productCount: database.products.filter(p => p.category === 'Home Goods').length },
+        { id: 'CAT-3', name: 'Apparel', productCount: database.products.filter(p => p.category === 'Apparel').length },
+        { id: 'CAT-4', name: 'Accessories', productCount: database.products.filter(p => p.category === 'Accessories').length }
+      ]
     });
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/products/featured', description: 'Returns a list of promoted products.' },
-      { method: 'GET', path: '/api/v1/categories', description: 'Returns available store categories.' }
+      { method: 'GET', path: '/api/v1/products/featured', description: 'Returns the 3 promoted products shown in the dashboard.' },
+      { method: 'GET', path: '/api/v1/categories', description: 'Returns all available store categories with product counts.' },
+      { method: 'GET', path: '/api/v1/promos/active', description: 'Returns currently active promotional banners.' }
     ]);
 
     // Fetch data
-    MockAPI.getProducts().then(data => setFeatured(data.slice(0, 3)));
+    setLoading(true);
+    MockAPI.getProducts().then(data => {
+      setFeatured(data.slice(0, 3));
+      setLoading(false);
+    });
   }, [setRequirements, setDbTables, setApiEndpoints]);
 
   return (
@@ -81,15 +103,27 @@ export const CatalogHome = () => {
         </div>
       </div>
 
-      <div className="grid-cards">
-        {featured.map(p => (
-          <div key={p.id} className="glass-panel" style={{ padding: '1.5rem' }}>
-            <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '1rem' }} />
-            <h4 style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigate(`/catalog/product/${p.id}`)}>{p.name}</h4>
-            <div style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>${p.price.toFixed(2)}</div>
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid-cards" aria-busy="true" aria-label="Loading featured products">
+          {[1, 2, 3].map(n => (
+            <div key={n} className="glass-panel" style={{ padding: '1.5rem' }}>
+              <div className="skeleton" style={{ width: '100%', height: '150px', borderRadius: '4px', marginBottom: '1rem' }} />
+              <div className="skeleton" style={{ width: '70%', height: '1rem', marginBottom: '0.5rem' }} />
+              <div className="skeleton" style={{ width: '30%', height: '1rem' }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid-cards">
+          {featured.map(p => (
+            <div key={p.id} className="glass-panel" style={{ padding: '1.5rem' }}>
+              <img src={p.images[0]} alt={p.name} style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px', marginBottom: '1rem' }} />
+              <h4 style={{ color: 'var(--primary)', cursor: 'pointer' }} onClick={() => navigate(`/catalog/product/${p.id}`)}>{p.name}</h4>
+              <div style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>${p.price.toFixed(2)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

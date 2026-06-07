@@ -14,20 +14,48 @@ export const CartPage = () => {
   useEffect(() => {
     setRequirements(`## Shopping Cart
 ### Acceptance Criteria:
-- Modifying quantity updates total instantly.
-- Subtotal + Tax - Discount = Total.
-- Cannot add negative items.
-- Checkout validates that sum is exact.
-- **Bug Hint:** The floating point math might slowly drift off the exact integer!`);
+- Quantity can only be **1 or more** — zero and negative values must be rejected.
+- Removing an item must remove **only that specific item**, regardless of its ID or position.
+- \`Total Items\` counter must update immediately after every add, update, or remove action.
+- Tax (8%) must be calculated on the **post-discount** subtotal, not the pre-discount subtotal.
+- Promo code \`SAVE20\` applies 20% off. Any code not in the approved list must be rejected.
+- The displayed Total must be mathematically exact: \`(Subtotal × 1.08) - Discount\`.
+- Checkout must fail gracefully if floating-point precision causes the total to drift.
+
+### Bug Hints (7 bugs in this area):
+- 🐛 **Level 3 (Boundary):** Click the **−** button when quantity is 1. Can the quantity go to 0 or negative? What happens to the cart total?
+- 🐛 **Level 5 (Stale State):** Add a product, then **remove** it. Does the "Total Items" counter update correctly?
+- 🐛 **Level 7 (Data Integrity):** Add **PROD-001** (Ultra HD 4K Smart TV) to the cart, then add another product, then try to remove PROD-001. Which item actually disappears?
+- 🐛 **Level 8 (Regex):** The valid promo codes are \`SAVE20\` and \`FALL10\`. Try entering a fake code that ends in "20" (e.g., \`HACK20\`, \`AAA20\`). Does it get accepted?
+- 🐛 **Level 8 (Logic):** Apply a promo code and check the order summary. Is the 8% tax applied on the **discounted** amount or the **full** subtotal? Check the DB for the expected formula.
+- 🐛 **Level 9 (Security):** Open your browser console and run \`localStorage.setItem('isAdmin', 'true')\`, then refresh the cart. What happens to the total?
+- 🐛 **Level 10 (Float):** Add items whose prices have cents (e.g., $249.50). After tax calculations, try clicking Checkout. Does the payment validation pass every time?
+
+### Expected Formula:
+\`\`\`
+Subtotal = sum(price × qty)
+Discount = Subtotal × promo_rate   ← if promo applied
+Tax      = (Subtotal - Discount) × 0.08   ← must apply AFTER discount
+Total    = Subtotal - Discount + Tax
+\`\`\``);
 
     setDbTables({
-      'Cart_Memory_State': items,
-      'Promo_Codes_DB': [{ code: 'SAVE20', discount: 0.2 }, { code: 'FALL10', discount: 0.1 }]
+      'Cart_State': items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.quantity, lineTotal: i.price * i.quantity })),
+      'Promo_Codes_DB': [
+        { code: 'SAVE20', discount_rate: 0.20, status: 'ACTIVE' },
+        { code: 'FALL10', discount_rate: 0.10, status: 'ACTIVE' }
+      ],
+      'Cart_Totals_Expected': [{
+        subtotal: subtotal.toFixed(4),
+        note_tax: 'Tax = (subtotal - discount) × 0.08',
+        note_actual: 'Tax = subtotal × 0.08  ← BUG if promo applied'
+      }]
     });
 
     setApiEndpoints([
-      { method: 'POST', path: '/api/v1/checkout/validate', description: 'Validates cart sums.', payloadTemplate: `{\n  "total": ${total}\n}` },
-      { method: 'POST', path: '/api/v1/promos/apply', description: 'Validates promo code.', payloadTemplate: `{\n  "code": "${promoCode}"\n}` }
+      { method: 'POST', path: '/api/v1/checkout/validate', description: 'Strict float-equality check. Fails if total has any floating-point drift beyond 2 decimal places.', payloadTemplate: `{\n  "total": ${total}\n}` },
+      { method: 'POST', path: '/api/v1/promos/apply', description: 'Validates promo code against approved list. Only SAVE20 and FALL10 are valid.', payloadTemplate: `{\n  "code": "${promoCode}"\n}` },
+      { method: 'DELETE', path: '/api/v1/cart/{itemId}', description: 'Removes a specific item from the cart by its product ID.' }
     ]);
   }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints]);
 
@@ -82,13 +110,13 @@ export const CartPage = () => {
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                      <span style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                      <button type="button" aria-label={`Decrease quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
+                      <span aria-live="polite" aria-label={`Quantity: ${item.quantity}`} style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                      <button type="button" aria-label={`Increase quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
                     </div>
-                    
-                    <button className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
-                      <Trash2 size={16} />
+
+                    <button type="button" aria-label={`Remove ${item.name} from cart`} className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -139,8 +167,8 @@ export const CartPage = () => {
                 onChange={(e) => setPromoCode(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <button className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
-                <Tag size={18} />
+              <button type="button" aria-label="Apply promo code" className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
+                <Tag size={18} aria-hidden="true" />
               </button>
             </div>
           </div>

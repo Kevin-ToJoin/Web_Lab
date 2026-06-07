@@ -9,19 +9,37 @@ export const OrderConfirmation = () => {
   useEffect(() => {
     setRequirements(`## Order Confirmation
 ### Acceptance Criteria:
-- Must display a randomly generated Order ID.
-- Must display a "Return to Dashboard" button.
-- Cart should be empty at this point.
-- **Bug Hint:** Is the cart actually emptied? Did the Order ID actually get saved to the DB?`);
+- Must display a **unique, randomly generated** Order ID (not hardcoded).
+- The Order ID must appear in the \`Orders_Table\` with the correct total and status.
+- The cart must be **completely emptied** after a successful order.
+- A "Return to Catalog" button must navigate back to the home page.
+- The displayed order total must match the actual cart total at time of checkout.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 5 (Stale State):** After reaching this page, press the browser Back button and go to your cart. Is the cart empty?
+- 🐛 **Level 7 (Data Integrity):** Look at the \`Orders_Table\` below. Is the \`total\` field correct? Did the order save the actual purchase amount?
+- 🐛 **Level 7 (Data Integrity):** The Order ID shown is \`ORD-9999\`. Place another order — is a new unique ID generated, or is it always the same?`);
 
     setDbTables({
       'Orders_Table': [
-        { id: 'ORD-9999', status: 'Processing', total: 0 } // Bug: total wasn't saved!
+        {
+          id: 'ORD-9999',         // Bug: always hardcoded, never unique
+          status: 'Processing',
+          total: 0,               // Bug: total was never passed/saved from cart
+          created_at: new Date().toISOString(),
+          items: '[]'             // Bug: cart items not persisted
+        }
+      ],
+      'Expected_Behavior': [
+        { field: 'id', expected: 'Unique ID per order (e.g. ORD-7823)', actual: 'Always ORD-9999' },
+        { field: 'total', expected: 'Cart total at time of purchase', actual: '0' },
+        { field: 'cart_after_order', expected: 'Empty', actual: 'Cart unchanged' }
       ]
     });
 
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/orders/ORD-9999', description: 'Fetch order receipt.' }
+      { method: 'GET', path: '/api/v1/orders/ORD-9999', description: 'Fetch the order receipt. In a real system the ID would be dynamic. Notice the total field returned.' },
+      { method: 'DELETE', path: '/api/v1/cart', description: 'Should be called to clear the cart after a successful order. Is it being called?' }
     ]);
   }, [setRequirements, setDbTables, setApiEndpoints]);
 

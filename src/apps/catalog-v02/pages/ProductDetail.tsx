@@ -22,8 +22,16 @@ export const ProductDetail = () => {
 ### Acceptance Criteria:
 - Display product image, name, category, and price.
 - Must be able to select quantity and add to cart.
-- Must display customer reviews.
-- **Bug Hint:** Look at the DB view. Are those reviews really from this product ID?`);
+- The "Back to Catalog" button must return the user to the catalog home page.
+- The "Add to Wishlist" button must be enabled and functional.
+- Review textarea must enforce a maximum of 50 characters.
+- Must display customer reviews for the **current** product only.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 2:** Try clicking "Back to Catalog" — where does it actually go?
+- 🐛 **Level 2:** Is there any button that appears broken/disabled when it should work?
+- 🐛 **Level 3:** The review form says max 50 chars. Can you submit more than that?
+- 🐛 **Level 7:** Look at the DB viewer. Do the reviews shown match this product's ID?`);
 
     const p = database.products.find(x => x.id === id);
     setDbTables({
