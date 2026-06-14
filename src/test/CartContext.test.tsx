@@ -43,6 +43,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line react-hooks/rules-of-hooks -- useCart runs inside renderHook's render callback
 const useCartSetup = () => renderHook(() => useCart(), { wrapper })
 
 // ─── Initial state ────────────────────────────────────────────────────────────

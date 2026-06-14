@@ -77,6 +77,7 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
     ]);
 
     // Fetch data
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     MockAPI.getProducts().then(data => {
       setFeatured(data.slice(0, 3));
