@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 export const CheckoutPayment = () => {
   const navigate = useNavigate();
   const { total } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [card, setCard] = useState('');
 

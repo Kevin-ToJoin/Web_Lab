@@ -8,7 +8,7 @@ import { ArrowLeft, Star } from 'lucide-react';
 export const ReviewsView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);

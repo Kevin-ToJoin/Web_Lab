@@ -5,7 +5,7 @@ import { ArrowLeft, User, Package, Settings } from 'lucide-react';
 
 export const UserProfile = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## User Profile

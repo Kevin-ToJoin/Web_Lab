@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQAPanel } from '../context/QAPanelContext';
-import { BookOpen, Database, TerminalSquare, Send } from 'lucide-react';
+import { useQAPanel, type BugSolution } from '../context/QAPanelContext';
+import { BookOpen, Database, TerminalSquare, Send, Lightbulb, Lock } from 'lucide-react';
 
 // ─── Minimal Markdown Renderer ────────────────────────────────────────────────
 // Handles: ## h2, ### h3, **bold**, `inline code`, - list items, ```code blocks```
@@ -96,11 +96,75 @@ const renderMarkdown = (md: string) => {
   return elements;
 };
 
+// ─── Solution diff card ───────────────────────────────────────────────────────
+const SolutionCard = ({ sol }: { sol: BugSolution }) => (
+  <div className="glass-panel" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem', gap: '0.5rem' }}>
+      <code style={{ fontSize: '0.75rem', color: 'var(--primary)', background: 'rgba(59,130,246,0.12)', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>{sol.bugId}</code>
+      <span style={{ fontSize: '0.7rem', color: 'var(--text-disabled)', fontStyle: 'italic' }}>{sol.technique}</span>
+    </div>
+    <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{sol.title}</h4>
+    <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', marginBottom: '0.75rem' }}>📁 {sol.location}</p>
+    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>{sol.explanation}</p>
+
+    {/* Buggy code */}
+    <div style={{ borderLeft: '3px solid var(--danger)', background: 'rgba(239,68,68,0.07)', borderRadius: '0 4px 4px 0', padding: '0.6rem 0.75rem', marginBottom: '0.5rem' }}>
+      <p style={{ fontSize: '0.68rem', color: 'var(--danger)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>BUGGY</p>
+      <pre style={{ margin: 0, fontSize: '0.75rem', color: '#fca5a5', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{sol.buggyCode}</pre>
+    </div>
+
+    {/* Fixed code */}
+    <div style={{ borderLeft: '3px solid var(--success)', background: 'rgba(16,185,129,0.07)', borderRadius: '0 4px 4px 0', padding: '0.6rem 0.75rem' }}>
+      <p style={{ fontSize: '0.68rem', color: 'var(--success)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>FIX</p>
+      <pre style={{ margin: 0, fontSize: '0.75rem', color: '#6ee7b7', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{sol.fixedCode}</pre>
+    </div>
+  </div>
+);
+
+// ─── Solutions lock screen ────────────────────────────────────────────────────
+const SolutionsLock = () => {
+  const { unlockSolutions } = useQAPanel();
+  const [pwd, setPwd] = useState('');
+  const [err, setErr] = useState(false);
+
+  const handleUnlock = () => {
+    const ok = unlockSolutions(pwd);
+    if (!ok) { setErr(true); setPwd(''); }
+  };
+
+  return (
+    <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+      <Lock size={40} color="var(--text-disabled)" style={{ marginBottom: '1rem' }} />
+      <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Solutions Locked</h3>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+        Try to find the bugs yourself first!<br />Enter the unlock code from your instructor when ready.
+      </p>
+      <div style={{ display: 'flex', gap: '0.5rem', maxWidth: '260px', margin: '0 auto' }}>
+        <input
+          type="password"
+          className="input-field"
+          placeholder="Unlock code"
+          value={pwd}
+          onChange={e => { setPwd(e.target.value); setErr(false); }}
+          onKeyDown={e => { if (e.key === 'Enter') handleUnlock(); }}
+          style={{ flex: 1, border: err ? '1px solid var(--danger)' : undefined }}
+          aria-label="Solutions unlock code"
+        />
+        <button type="button" className="btn btn-primary" style={{ padding: '0.75rem 1rem' }} onClick={handleUnlock}>
+          <Lightbulb size={16} aria-hidden="true" />
+        </button>
+      </div>
+      {err && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>Incorrect code.</p>}
+      <p style={{ color: 'var(--text-disabled)', fontSize: '0.72rem', marginTop: '1.5rem' }}>Hint: the code is a single English word meaning "to expose".</p>
+    </div>
+  );
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const QAInspectorPanel = () => {
-  const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api'>('reqs');
-  const { requirementsMarkdown, dbTables, apiEndpoints } = useQAPanel();
+  const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api' | 'solutions'>('reqs');
+  const { requirementsMarkdown, dbTables, apiEndpoints, solutions, solutionsUnlocked } = useQAPanel();
   // Each endpoint gets its own response state, keyed by index
   const [apiResponses, setApiResponses] = useState<Record<number, string>>({});
 
@@ -108,9 +172,10 @@ export const QAInspectorPanel = () => {
     setApiResponses(prev => ({ ...prev, [idx]: text }));
 
   const tabs = [
-    { id: 'reqs' as const, label: 'Reqs',  icon: <BookOpen size={14} aria-hidden="true" /> },
-    { id: 'db'   as const, label: 'DB',    icon: <Database size={14} aria-hidden="true" /> },
-    { id: 'api'  as const, label: 'API',   icon: <TerminalSquare size={14} aria-hidden="true" /> },
+    { id: 'reqs'      as const, label: 'Reqs',      icon: <BookOpen size={14} aria-hidden="true" /> },
+    { id: 'db'        as const, label: 'DB',         icon: <Database size={14} aria-hidden="true" /> },
+    { id: 'api'       as const, label: 'API',        icon: <TerminalSquare size={14} aria-hidden="true" /> },
+    { id: 'solutions' as const, label: 'Solutions',  icon: <Lightbulb size={14} aria-hidden="true" /> },
   ];
 
   return (
@@ -181,6 +246,21 @@ export const QAInspectorPanel = () => {
               ))
             )}
           </div>
+        )}
+
+        {/* Solutions Tab */}
+        {activeTab === 'solutions' && (
+          solutionsUnlocked ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {solutions.length === 0 ? (
+                <p style={{ color: 'var(--text-disabled)' }}>No solutions defined for this page yet.</p>
+              ) : (
+                solutions.map(sol => <SolutionCard key={sol.bugId} sol={sol} />)
+              )}
+            </div>
+          ) : (
+            <SolutionsLock />
+          )
         )}
 
         {/* API Tab */}

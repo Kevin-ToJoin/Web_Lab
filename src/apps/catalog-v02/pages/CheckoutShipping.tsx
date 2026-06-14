@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const CheckoutShipping = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');

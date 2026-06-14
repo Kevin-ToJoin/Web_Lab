@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, totalItems, subtotal, discount, tax, total, applyPromo } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const [promoCode, setPromoCode] = useState('');
   const [checkoutStatus, setCheckoutStatus] = useState('');
 

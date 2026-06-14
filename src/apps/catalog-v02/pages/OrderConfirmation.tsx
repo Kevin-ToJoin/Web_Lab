@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const OrderConfirmation = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## Order Confirmation

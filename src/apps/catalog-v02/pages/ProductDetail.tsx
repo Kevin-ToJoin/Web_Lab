@@ -10,7 +10,7 @@ export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,46 @@ export const ProductDetail = () => {
     setApiEndpoints([
       { method: 'GET', path: `/api/v1/products/${id}`, description: 'Fetch product details.' },
       { method: 'POST', path: '/api/v1/cart', description: 'Add item to cart.', payloadTemplate: '{\n  "productId": "PROD-1",\n  "qty": 1\n}' }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'CAT-03', title: 'Back button navigates to invalid URL',
+        location: 'ProductDetail.tsx ~line 69', technique: 'Broken Link',
+        buggyCode: `onClick={() => navigate('/catalog/invalid-url')}`,
+        fixedCode:  `onClick={() => navigate('/catalog')}`,
+        explanation: 'The onClick handler has a hardcoded typo. It navigates to a non-existent route instead of the catalog home.',
+      },
+      {
+        bugId: 'CAT-04', title: 'Add to Wishlist button is permanently disabled',
+        location: 'ProductDetail.tsx ~line 106', technique: 'Broken UI',
+        buggyCode: `<button className="btn btn-secondary" disabled>
+  Add to Wishlist
+</button>`,
+        fixedCode:  `<button className="btn btn-secondary" onClick={handleAddToWishlist}>
+  Add to Wishlist
+</button>`,
+        explanation: 'The `disabled` attribute is hardcoded with no conditional. The button should be enabled and trigger a wishlist action.',
+      },
+      {
+        bugId: 'CAT-06b', title: 'Review textarea has no maxLength enforcement',
+        location: 'ProductDetail.tsx ~line 124', technique: 'Boundary Value',
+        buggyCode: `<textarea
+  className="input-field"
+  rows={3}
+  value={reviewText}
+  onChange={(e) => setReviewText(e.target.value)}
+  // BUG: Missing maxLength prop!
+/>`,
+        fixedCode:  `<textarea
+  className="input-field"
+  rows={3}
+  maxLength={50}
+  value={reviewText}
+  onChange={(e) => setReviewText(e.target.value)}
+/>`,
+        explanation: 'The label says max 50 chars but no `maxLength` attribute is set on the textarea. The submit handler also skips validation silently.',
+      },
     ]);
 
     if (id) {
