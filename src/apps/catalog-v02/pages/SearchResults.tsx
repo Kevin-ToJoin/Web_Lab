@@ -38,6 +38,14 @@ export const SearchResults = () => {
         method: 'GET',
         path: `/api/v1/search?q=${encodeURIComponent(query)}`,
         description: 'Queries the product database for the given term.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProducts(query);
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 500, body: { error: (e as Error).message } };
+          }
+        },
       }
     ]);
 

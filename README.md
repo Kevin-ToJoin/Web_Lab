@@ -1,18 +1,29 @@
 # TestLab 101 — Web QA Training Platform
 
-A professional sandbox for QA engineers. Explore 5 real-looking web applications, each containing intentionally injected bugs ranging from trivial (Level 1) to practically impossible (Level 10).
+A professional sandbox for QA engineers. Explore **6 real-looking web applications**, each
+containing **intentionally injected bugs** ranging from trivial (Level 1) to practically
+impossible (Level 10). Every app ships with an in-app **QA Inspector** (requirements, database
+viewer, live API tester, and locked solutions) and a global **Bug Reporter** for filing and
+scoring your findings.
+
+> **100 intentionally injected bugs** across 6 apps and 10 difficulty levels.
 
 ---
 
 ## What is this?
 
-TestLab 101 simulates the kinds of bugs you'll encounter in real-world software, organized by testing technique and difficulty. Each app comes with a built-in **QA Inspector panel** — a split-screen IDE-like tool showing:
+TestLab 101 simulates the kinds of defects you encounter in real-world software, organized by
+testing technique and difficulty. Your job is to find the bugs by testing each app against its
+documented requirements, then document them as proper bug reports (title, severity, steps to
+reproduce, expected vs. actual result).
 
-- **Requirements** — the acceptance criteria to test against
-- **DB Viewer** — the underlying database state so you can verify data integrity
-- **API Endpoints** — live testable mock API calls
+Two tools support you throughout:
 
-Your job: find the bugs, document them as proper bug reports (title, steps to reproduce, expected vs. actual result, severity).
+- **QA Inspector** — a split-screen panel showing the spec, the underlying database, a
+  functional API tester, and (instructor-gated) solutions.
+- **Bug Reporter** — a floating button on every app that opens a bug-report form. Reports
+  persist to `localStorage`, are fuzzy-matched against the known-bug registry, and drive a
+  per-app score so you can see how many real bugs you have caught.
 
 ---
 
@@ -28,78 +39,149 @@ npm run dev
 
 Then open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Other commands
+### Scripts
 
 ```bash
-npm run build    # TypeScript check + production build
-npm run lint     # ESLint static analysis
-npm run preview  # Preview the production build locally
+npm run dev            # Start the Vite dev server (HMR)
+npm run build          # TypeScript project build (tsc -b) + production Vite build
+npm run preview        # Preview the production build locally
+npm run lint           # ESLint static analysis
+
+npm run test:unit      # Run Vitest unit tests once
+npm run test:unit:watch# Run Vitest in watch mode
+npm test               # Alias for test:unit
+
+npm run test:e2e       # Run Playwright end-to-end tests (e2e/)
+npm run test:e2e:ui    # Run Playwright in interactive UI mode
 ```
 
----
-
-## The 5 Testing Environments
-
-| App | Theme | Difficulty | Bug Levels | Testing Techniques |
-|-----|-------|-----------|-----------|-------------------|
-| **Product Catalog** | Online store catalog with QA Inspector | Easy | 1–2 | UI observation, broken links, disabled elements |
-| **E-commerce Store** | Coffee shop cart & checkout | Medium | 3–5 | Boundary value analysis, equivalence partitioning, state bugs |
-| **Bank Core System** | Banking transfers & transactions | Hard | 6–8 | State transitions, session management, async race conditions |
-| **Patient Portal** | Medical copay & appointment booking | Expert | 8–9 | Decision tables, date validation, unreachable branches |
-| **Trading Dashboard** | Live stock trading platform | Impossible | 10 | Race conditions, floating-point precision, timezone bugs |
+> **Note on unit tests:** the Vitest suite (in `src/test/`) includes *characterization tests*
+> that deliberately assert known bugs **exist**. They document defects such as a Level 1
+> placeholder description, the "Laptap Stand" typo, `addToCart` accepting a negative quantity
+> (Level 3), and `removeFromCart` deleting by position instead of by ID (Level 7). These tests
+> are expected to pass while the bugs are present — they will start failing once the bugs are
+> fixed, which is the intended signal.
 
 ---
 
-## Bug Levels Explained
+## The 6 Testing Environments
 
-| Level | Description | Example |
-|-------|-------------|---------|
-| 1 | **Visual / Copy** | Placeholder text left in production |
-| 2 | **Broken UI** | Button navigates to wrong page, element incorrectly disabled |
-| 3 | **Boundary Value** | No validation on quantity field (accepts -1), off-by-one pagination |
-| 4 | **Equivalence** | Free shipping kicks in at $101 instead of $100, wrong category filter |
-| 5 | **Stale State** | Cart item count doesn't update after removing an item |
-| 6 | **Error Handling** | Silent failure on API error, infinite loading state |
-| 7 | **Data Integrity** | Product shows reviews from a different product ID |
-| 8 | **Complex Logic** | Decision table uses `OR` where `AND` is required, regex flaw |
-| 9 | **Validation Edge Cases** | Past dates accepted, leap year throws error, weekends not blocked |
-| 10 | **Concurrency / Precision** | Race condition allows double-spend, floating-point drift, timezone sort |
+| App | Route | Difficulty | Bug Levels | Bug Count | Focus / Techniques |
+|-----|-------|-----------|-----------|:---------:|--------------------|
+| **Product Catalog** | `/catalog` | Easy | 1–10 | **30** | UI observation, broken links, disabled elements, data integrity — full multi-page flow |
+| **Registration Portal** | `/registration` | Medium | 3–6 | **14** | Multi-step form, state management bugs |
+| **E-commerce Store** | `/ecommerce` | Medium | 3–5 | **14** | Boundary value analysis, equivalence partitioning, stale state in cart & checkout |
+| **Bank Core System** | `/bank` | Hard | 6–8 | **14** | State transitions, session management, async submission/race conditions |
+| **Patient Portal** (Healthcare) | `/healthcare` | Expert | 8–9 | **14** | Decision-table logic, complex date validation, unreachable branches |
+| **Trading Dashboard** | `/trading` | Impossible | 10 | **14** | Race conditions, floating-point cascades, timezone offset bugs |
+| | | | | **100** | **Total** |
+
+> The hub page (`/`) lists every app with its difficulty badge and level range. The cards above
+> match the difficulty labels shown in-app. Note that the on-hub "Levels 1–2" copy for Product
+> Catalog reflects its starting levels; its bug registry actually spans Levels 1–10.
+
+Bug counts are sourced from the modular registry in `src/data/bugs/` and aggregated in
+`src/data/knownBugs.ts` (`TOTAL_BUGS = 100`).
 
 ---
 
-## How to Use the QA Inspector Panel (Product Catalog only)
+## The QA Inspector
 
-The Product Catalog app has a split-screen layout:
+Apps render in a split-screen `QALayout` — the application on the left (~70%) and the **QA
+Inspector** panel on the right (~30%). The inspector has four tabs:
 
-- **Left (70%)** — The application you're testing
-- **Right (30%)** — The QA Inspector with 4 tabs:
-  - `Requirements` — Markdown spec with acceptance criteria and bug hints
-  - `DB Viewer` — JSON snapshot of the relevant database tables
-  - `API` — Endpoint list with a live "Send" button to test responses
-  - `Response` — Output of your last API call
+- **Reqs** — Markdown requirements and acceptance criteria for the current view, rendered by a
+  lightweight built-in Markdown renderer (headings, bold, inline code, lists, code blocks).
+- **DB** — A read-only table viewer that pretty-prints the underlying database tables as JSON.
+  Use it to compare what the UI shows against what the data actually contains — key for data
+  integrity bugs.
+- **API** — A **functional** API tester. Endpoints are listed with their method and path;
+  clicking **Send** executes the endpoint's real handler against the (editable) request body
+  and renders a **live** response with an HTTP status line and pretty-printed JSON. Endpoints
+  backed by a real handler show a green **LIVE** badge. (A few legacy catalog endpoints still
+  use canned `expectedResponse` strings.)
+- **Solutions** — Diff-style cards showing each bug's **buggy** vs. **fixed** code, its
+  location, technique, and an explanation. This tab is **locked** behind an unlock code; enter
+  `REVEAL` to reveal the solutions.
 
-Use the DB Viewer to compare what the UI shows vs. what the database actually contains — this is key for data integrity bugs.
+State is provided via `QAContext` (`useQAPanel`): pages call setters to feed requirements, DB
+tables, API endpoints, and solutions into the inspector.
+
+---
+
+## The Bug Reporter
+
+A floating **Report Bug** button appears on every app. It opens a modal form with:
+
+- **Bug Title** (required)
+- **Severity** — Critical / High / Medium / Low
+- **Steps to Reproduce** (required)
+- **Expected Result** (required)
+- **Actual Result** (required)
+
+On submit:
+
+- The report is saved to `localStorage` (key `testlab101_reports`) so it survives reloads.
+- The title is **fuzzy-matched** against the known-bug registry for the current app: if **2 or
+  more keywords** of a known bug appear in your title, the report is linked to that bug.
+- A **per-app score** (`found / total`) counts how many distinct known bugs you have matched.
+
+A **My Reports** panel lets you review submitted reports (and clear them). Reporter state lives
+in `BugReporterContext` (`useBugReporter`), provided at the app root.
+
+---
+
+## Architecture
+
+- **Shared QA module** — `src/qa/` houses the reusable inspector: `QAContext` (state +
+  `REVEAL` gate), `QAInspectorPanel` (the 4-tab UI + Markdown renderer + live API tester), and
+  `QALayout` (the split-screen wrapper for the standalone apps).
+- **Modular bug registry** — each app's known bugs live in their own file under
+  `src/data/bugs/` (`catalog.ts`, `registration.ts`, `ecommerce.ts`, `bank.ts`,
+  `healthcare.ts`, `trading.ts`), aggregated by `src/data/knownBugs.ts`.
+- **Routing** — `react-router-dom` v7. `App.tsx` defines the hub (`/`), one route per app, and
+  a `*` 404 fallback. Each app is wrapped in an `ErrorBoundary`.
+- **State** — React Context API: `BugReporterProvider` wraps the whole app; `QAProvider` wraps
+  each inspector-equipped app.
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── App.tsx                        # Main router + hub page
-├── index.css                      # Global styles (glassmorphism design system)
-├── components/
-│   └── ErrorBoundary.tsx          # Crash boundary for each app
-└── apps/
-    ├── catalog-v02/               # Product Catalog (Levels 1–2) with QA Inspector
-    │   ├── api/                   # MockAPI + mock database
-    │   ├── context/               # Cart, BugTracker, QAPanel state
-    │   ├── components/            # Layout + QA Inspector Panel
-    │   └── pages/                 # 10 pages: home → order confirmation
-    ├── EcommerceApp.tsx            # E-commerce Store (Levels 3–5)
-    ├── BankApp.tsx                 # Bank Core System (Levels 6–8)
-    ├── HealthcareApp.tsx           # Patient Portal (Levels 8–9)
-    └── TradingApp.tsx              # Trading Dashboard (Level 10)
+Web_Lab/
+├── README.md
+├── package.json
+├── e2e/                              # Playwright end-to-end tests
+│   ├── catalog-flow.spec.ts
+│   └── registration-flow.spec.ts
+└── src/
+    ├── App.tsx                       # Router + hub page + global Bug Reporter mount
+    ├── index.css                     # Global styles (glassmorphism design system)
+    ├── apps/
+    │   ├── catalog-v02/              # Product Catalog (multi-page, Levels 1–10)
+    │   ├── EcommerceApp.tsx          # E-commerce Store
+    │   ├── RegistrationApp.tsx       # Registration Portal
+    │   ├── BankApp.tsx               # Bank Core System
+    │   ├── HealthcareApp.tsx         # Patient Portal
+    │   └── TradingApp.tsx            # Trading Dashboard
+    ├── qa/                           # Shared QA Inspector module
+    │   ├── QAContext.tsx             # Inspector state + REVEAL unlock gate
+    │   ├── QAInspectorPanel.tsx      # 4-tab UI: Reqs / DB / API / Solutions
+    │   └── QALayout.tsx              # Split-screen app + inspector layout
+    ├── context/
+    │   └── BugReporterContext.tsx    # Reports, localStorage persistence, fuzzy scoring
+    ├── components/
+    │   ├── ErrorBoundary.tsx         # Per-app crash boundary
+    │   └── BugReporter/              # Button, Modal, My Reports panel
+    ├── data/
+    │   ├── knownBugs.ts              # Aggregated registry + TOTAL_BUGS
+    │   ├── bugTypes.ts               # KnownBug type
+    │   └── bugs/                     # Per-app bug definitions (catalog, registration, …)
+    └── test/                         # Vitest unit + characterization tests
+        ├── MockAPI.test.ts
+        ├── CartContext.test.tsx
+        └── mockDatabase.test.ts
 ```
 
 ---
@@ -110,22 +192,36 @@ src/
 - **React Router v7** — client-side routing
 - **Vite** — build tool with HMR
 - **Lucide React** — icon library
-- Vanilla CSS with CSS custom properties (glassmorphism design)
+- **Vitest** + Testing Library — unit & characterization tests
+- **Playwright** — end-to-end tests
+- Vanilla CSS with custom properties (glassmorphism design)
 
-No external APIs. Everything runs locally with mock data.
+No external APIs — everything runs locally against mock data and in-app handlers.
 
 ---
 
-## Tips for Bug Reporting
+## How to use TestLab 101 as a learner
 
-A good bug report includes:
+1. Open the hub and pick an environment — start with **Product Catalog** if you're new.
+2. Read the **Reqs** tab in the QA Inspector to learn the acceptance criteria for each view.
+3. Test the UI against those requirements. Use the **DB** tab to verify data integrity and the
+   **API** tab to probe endpoints with live requests.
+4. When you find a defect, click **Report Bug** and file a complete report: title, severity,
+   steps to reproduce, expected vs. actual result.
+5. Check your **per-app score** — the Bug Reporter fuzzy-matches your report titles against the
+   known-bug registry, so descriptive titles score better.
+6. Only after a genuine attempt, reveal the answers (see below) to compare your findings against
+   the buggy-vs-fixed solution cards.
 
-1. **Title** — Short, descriptive (e.g., "Back button on Product Detail navigates to non-existent URL")
-2. **Steps to Reproduce** — Numbered, specific
-3. **Expected Result** — What should happen per the requirements
-4. **Actual Result** — What actually happens
-5. **Severity** — Critical / High / Medium / Low
-6. **Evidence** — Screenshot, network response, or DB viewer output
+---
+
+## For instructors
+
+The **Solutions** tab in the QA Inspector is gated behind an unlock code so learners can't peek
+prematurely. The code is **`REVEAL`** (case-insensitive; the in-app hint is *"a single English
+word meaning to expose"*). Share it with learners only after they have attempted the exercises.
+Solutions render as diff-style cards with the buggy code, the fix, the file location, the
+testing technique, and an explanation for each bug.
 
 ---
 

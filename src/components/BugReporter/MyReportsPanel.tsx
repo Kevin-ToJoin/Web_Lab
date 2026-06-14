@@ -1,6 +1,6 @@
 import { X, Trash2, Bug, CheckCircle, AlertCircle } from 'lucide-react';
 import { useBugReporter, type BugReport, type Severity } from '../../context/BugReporterContext';
-import { knownBugs } from '../../data/knownBugs';
+import { knownBugs, TOTAL_BUGS } from '../../data/knownBugs';
 
 const APP_LABELS: Record<string, string> = {
   catalog:      'Product Catalog',
@@ -84,6 +84,12 @@ export const MyReportsPanel = () => {
   const totalFound = Object.keys(APP_LABELS).reduce((sum, id) => sum + getScoreForApp(id).found, 0);
   const totalKnown = knownBugs.length;
 
+  // Distinct known bugs found across ALL apps (no double-counting)
+  const globalFound = new Set(
+    reports.map(r => r.matchedKnownBugId).filter((id): id is string => Boolean(id))
+  ).size;
+  const globalPct = Math.round((globalFound / TOTAL_BUGS) * 100);
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 1800,
@@ -115,19 +121,33 @@ export const MyReportsPanel = () => {
           </button>
         </div>
 
-        {/* Global progress bar */}
-        <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--glass-border)', flexShrink: 0 }}>
-          <div style={{ background: 'var(--glass-border)', borderRadius: 'var(--radius-full)', height: '6px', overflow: 'hidden' }}>
+        {/* Global progress — platform-wide distinct bugs found */}
+        <div className="glass-panel" style={{ margin: '1.25rem 1.5rem 0', padding: '1.25rem', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+              <span style={{
+                fontSize: '2.25rem', fontWeight: 800, lineHeight: 1,
+                background: 'linear-gradient(90deg, var(--primary), var(--secondary))',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                {globalFound}
+              </span>
+              <span style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                / {TOTAL_BUGS} bugs found
+              </span>
+            </div>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: globalFound > 0 ? 'var(--success)' : 'var(--text-muted)' }}>
+              {globalPct}%
+            </span>
+          </div>
+          <div style={{ background: 'var(--glass-border)', borderRadius: 'var(--radius-full)', height: '8px', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 'var(--radius-full)',
               background: 'linear-gradient(90deg, var(--primary), var(--secondary))',
-              width: `${Math.round((totalFound / totalKnown) * 100)}%`,
+              width: `${globalPct}%`,
               transition: 'width 0.5s ease',
             }} />
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', marginTop: '0.35rem' }}>
-            {Math.round((totalFound / totalKnown) * 100)}% of all known bugs found
-          </p>
         </div>
 
         {/* Reports by app */}

@@ -13,10 +13,13 @@ import { BugReporterProvider } from './context/BugReporterContext';
 import { BugReporterButton } from './components/BugReporter/BugReporterButton';
 import { BugReporterModal } from './components/BugReporter/BugReporterModal';
 import { MyReportsPanel } from './components/BugReporter/MyReportsPanel';
+import { knownBugs, TOTAL_BUGS } from './data/knownBugs';
 
 // --- Main Menu ---
 const MainMenu = () => {
   const navigate = useNavigate();
+
+  const bugCountFor = (id: string) => knownBugs.filter(b => b.appId === id).length;
 
   const apps = [
     {
@@ -92,6 +95,21 @@ const MainMenu = () => {
           A professional sandbox for QA engineers. Choose an environment and discover
           intentionally injected bugs — from trivial to impossible.
         </p>
+        <p style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginTop: '1.25rem',
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: 'var(--primary)',
+          padding: '0.4rem 1rem',
+          background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
+          borderRadius: 'var(--radius-full)'
+        }}>
+          🐛 {TOTAL_BUGS} intentionally injected bugs across {apps.length} apps
+        </p>
       </header>
 
       {/* How to use */}
@@ -141,8 +159,13 @@ const MainMenu = () => {
             </div>
             <h3>{app.title}</h3>
             <p style={{ flexGrow: 1, color: 'var(--text-muted)' }}>{app.description}</p>
-            <div style={{ display: 'flex', alignItems: 'center', color: 'var(--primary)', fontWeight: 500, marginTop: '0.5rem' }}>
-              Start Testing <ChevronRight size={18} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', color: 'var(--primary)', fontWeight: 500 }}>
+                Start Testing <ChevronRight size={18} />
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-disabled)', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--radius-full)' }}>
+                🐛 {bugCountFor(app.id)} bugs
+              </span>
             </div>
           </div>
         ))}

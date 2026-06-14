@@ -46,7 +46,19 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/products/featured', description: 'Returns the 3 promoted products shown in the dashboard.' },
+      {
+        method: 'GET',
+        path: '/api/v1/products/featured',
+        description: 'Returns the 3 promoted products shown in the dashboard.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProducts();
+            return { status: 200, body: data.slice(0, 3) };
+          } catch (e) {
+            return { status: 500, body: { error: (e as Error).message } };
+          }
+        },
+      },
       { method: 'GET', path: '/api/v1/categories', description: 'Returns all available store categories with product counts.' },
       { method: 'GET', path: '/api/v1/promos/active', description: 'Returns currently active promotional banners.' }
     ]);

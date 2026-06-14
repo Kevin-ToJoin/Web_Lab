@@ -53,8 +53,45 @@ Total    = Subtotal - Discount + Tax
     });
 
     setApiEndpoints([
-      { method: 'POST', path: '/api/v1/checkout/validate', description: 'Strict float-equality check. Fails if total has any floating-point drift beyond 2 decimal places.', payloadTemplate: `{\n  "total": ${total}\n}` },
-      { method: 'POST', path: '/api/v1/promos/apply', description: 'Validates promo code against approved list. Only SAVE20 and FALL10 are valid.', payloadTemplate: `{\n  "code": "${promoCode}"\n}` },
+      {
+        method: 'POST', path: '/api/v1/checkout/validate',
+        description: 'Strict float-equality check. Fails if total has any floating-point drift beyond 2 decimal places.',
+        payloadTemplate: `{\n  "total": ${total}\n}`,
+        handler: (requestBody: string) => {
+          let body: { total?: number };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          // BUG CART-07: strict float-equality; drift like 120.0000000001 fails.
+          const t = Number(body.total);
+          const floatDrift = (t * 100) % 1;
+          if (floatDrift !== 0) {
+            return { status: 422, body: { ok: false, error: `Amount mismatch. Expected ${t.toFixed(2)} but received ${t}.` } };
+          }
+          return { status: 200, body: { ok: true, total: t } };
+        },
+      },
+      {
+        method: 'POST', path: '/api/v1/promos/apply',
+        description: 'Validates promo code against approved list. Only SAVE20 and FALL10 are valid.',
+        payloadTemplate: `{\n  "code": "${promoCode}"\n}`,
+        handler: (requestBody: string) => {
+          let body: { code?: string };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          const code = body.code || '';
+          // BUG CART-04: regex accepts ANY code ending in "20" (e.g. HACK20).
+          if (/.*20$/.test(code)) {
+            return { status: 200, body: { accepted: true, code, discountRate: 0.20 } };
+          }
+          return { status: 200, body: { accepted: false, code } };
+        },
+      },
       { method: 'DELETE', path: '/api/v1/cart/{itemId}', description: 'Removes a specific item from the cart by its product ID.' }
     ]);
 

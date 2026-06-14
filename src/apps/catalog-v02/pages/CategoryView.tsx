@@ -46,7 +46,15 @@ The \`Products_Table\` below shows the **correct** expected dataset for category
         method: 'GET',
         path: `/api/v1/products?category=${catName}`,
         description: `Fetches products for category "${catName}". Expected: ${database.products.filter(p => p.category === catName).length} items. Click Send to see what the API actually returns.`,
-        expectedResponse: JSON.stringify(database.products.filter(p => p.category === catName), null, 2)
+        expectedResponse: JSON.stringify(database.products.filter(p => p.category === catName), null, 2),
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProducts('', catName);
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 500, body: { error: (e as Error).message } };
+          }
+        }
       }
     ]);
     setSolutions([

@@ -52,8 +52,36 @@ The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal u
     });
 
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/users/me', description: 'Fetches current user profile. Check the response for fields that should not be exposed.' },
-      { method: 'PUT', path: '/api/v1/users/me', description: 'Updates user name/email. Should return 200 with updated user and display a success toast.', payloadTemplate: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}' },
+      {
+        method: 'GET', path: '/api/v1/users/me',
+        description: 'Fetches current user profile. Check the response for fields that should not be exposed.',
+        // BUG USER-01: returns the full DB row including passwordHash + isAdmin.
+        handler: () => ({
+          status: 200,
+          body: {
+            id: 'U-123',
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            passwordHash: '$2b$12$L7p.tH6.R/b8T2H...xyz',
+            isAdmin: false,
+            createdAt: '2022-06-15T08:00:00Z',
+          },
+        }),
+      },
+      {
+        method: 'PUT', path: '/api/v1/users/me',
+        description: 'Updates user name/email. Should return 200 with updated user and display a success toast.',
+        payloadTemplate: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}',
+        handler: (requestBody: string) => {
+          try {
+            JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          // Returns success but there is no real persistence layer behind it.
+          return { status: 200, body: { updated: true } };
+        },
+      },
       { method: 'GET', path: '/api/v1/users/me/orders', description: 'Returns past orders. Should be called when the Orders tab is clicked.' }
     ]);
 

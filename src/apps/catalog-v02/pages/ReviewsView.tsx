@@ -31,10 +31,18 @@ export const ReviewsView = () => {
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { 
-        method: 'GET', 
-        path: `/api/v1/products/${id}/reviews`, 
+      {
+        method: 'GET',
+        path: `/api/v1/products/${id}/reviews`,
         description: 'Fetches all reviews for the product.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProductById(id || '');
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 404, body: { error: (e as Error).message } };
+          }
+        },
       },
       {
         method: 'POST',

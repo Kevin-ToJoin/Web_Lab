@@ -49,7 +49,26 @@ CVC:    exactly 3 digits       (e.g. 123 ✓, abc ✗)
         method: 'POST',
         path: '/api/v1/payment/charge',
         description: 'Initiates the payment charge. Should only be called once per order. Each click of "Authorize Payment" triggers one call.',
-        payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card || ''}",\n  "expiry": "MM/YY",\n  "cvc": ""\n}`
+        payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card || ''}",\n  "expiry": "MM/YY",\n  "cvc": ""\n}`,
+        handler: (requestBody: string) => {
+          let body: { amount?: number; card?: string; expiry?: string; cvc?: string };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          // BUG PAY-01/PAY-02: no Luhn check, no expiry/cvc validation — an
+          // obviously invalid card is accepted and charged.
+          return {
+            status: 200,
+            body: {
+              charged: true,
+              amount: body.amount,
+              card: body.card,
+              transactionId: `TXN-${Math.floor(Math.random() * 100000)}`,
+            },
+          };
+        },
       }
     ]);
 
