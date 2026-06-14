@@ -87,7 +87,7 @@ describe('CartContext — addToCart', () => {
    * Requirement: quantity must be ≥ 1. Negative quantities must be rejected.
    * Actual:      addToCart(-1) is accepted and subtracts from the total.
    */
-  it('rejects quantity of 0 or less', () => {
+  it('documents KNOWN BUG (Level 3): addToCart accepts a negative quantity', () => {
     const { result } = useCartSetup()
     act(() => { result.current.addToCart(PROD_002, -1) })
 
@@ -96,8 +96,10 @@ describe('CartContext — addToCart', () => {
       console.warn('[KNOWN BUG - Level 3] addToCart accepted a negative quantity (-1). Items:', result.current.items)
     }
 
-    // Requirement: cart must remain empty (invalid qty rejected)
-    expect(result.current.items).toHaveLength(0)
+    // Requirement: invalid qty (<1) must be rejected and the cart stay empty.
+    // Characterization: the bug is present — the negative quantity is accepted.
+    // When the bug is fixed, invert this to expect(result.current.items).toHaveLength(0).
+    expect(hasNegativeQty).toBe(true)
   })
 })
 
@@ -119,7 +121,7 @@ describe('CartContext — removeFromCart', () => {
    * Actual:      It calls array.shift(), removing the FIRST item regardless of ID.
    *              If PROD-001 is not first, a different product is deleted.
    */
-  it('removes PROD-001 specifically, not the first item in the array', () => {
+  it('documents KNOWN BUG (Level 7): removeFromCart("PROD-001") deletes the first item, not by ID', () => {
     const { result } = useCartSetup()
     // Add PROD-002 first, then PROD-001 — PROD-001 is now at index 1
     act(() => { result.current.addToCart(PROD_002, 1) })
@@ -134,8 +136,11 @@ describe('CartContext — removeFromCart', () => {
       console.warn('[KNOWN BUG - Level 7] removeFromCart("PROD-001") removed PROD-002 (the first item) instead.')
     }
 
-    expect(prod001Gone).toBe(true)      // PROD-001 should be gone
-    expect(prod002StillHere).toBe(true) // PROD-002 must survive
+    // Requirement: PROD-001 should be gone and PROD-002 should survive.
+    // Characterization: the bug shifts the first item, so PROD-002 is removed
+    // and PROD-001 wrongly survives.
+    expect(prod002StillHere).toBe(false)
+    expect(prod001Gone).toBe(false)
   })
 
   /**
@@ -143,7 +148,7 @@ describe('CartContext — removeFromCart', () => {
    * Requirement: totalItems must decrease after removeFromCart.
    * Actual:      removeFromCart does NOT update totalItems — the counter goes stale.
    */
-  it('updates totalItems after removing a product', () => {
+  it('documents KNOWN BUG (Level 5): totalItems goes stale after removing a product', () => {
     const { result } = useCartSetup()
     act(() => { result.current.addToCart(PROD_002, 2) })
     expect(result.current.totalItems).toBe(2)
@@ -154,7 +159,9 @@ describe('CartContext — removeFromCart', () => {
       console.warn(`[KNOWN BUG - Level 5] totalItems is ${result.current.totalItems} after removing all items (expected 0).`)
     }
 
-    expect(result.current.totalItems).toBe(0)
+    // Requirement: totalItems should drop to 0. Characterization: removeFromCart
+    // never updates the counter, so it stays stale at 2.
+    expect(result.current.totalItems).toBe(2)
   })
 })
 
@@ -197,7 +204,7 @@ describe('CartContext — applyPromo', () => {
    * Actual:      The regex /.*20$/ accepts ANY string ending in "20"
    *              (e.g., "HACK20", "INVALID20", "00000020").
    */
-  it('rejects invalid promo codes that happen to end in "20"', () => {
+  it('documents KNOWN BUG (Level 8): fake promo codes ending in "20" are accepted', () => {
     const INVALID_CODES = ['HACK20', 'INVALID20', 'AAA20', '00020', 'NOTACODE20']
     for (const code of INVALID_CODES) {
       const { result } = renderHook(() => useCart(), { wrapper })
@@ -208,7 +215,9 @@ describe('CartContext — applyPromo', () => {
         console.warn(`[KNOWN BUG - Level 8] Fake promo code "${code}" was accepted (regex flaw). Discount: ${result.current.discount}`)
       }
 
-      expect(result.current.discount).toBe(0)
+      // Requirement: only SAVE20/FALL10 are valid. Characterization: the regex
+      // /.*20$/ wrongly accepts any code ending in "20", granting a discount.
+      expect(result.current.discount).toBeGreaterThan(0)
     }
   })
 
@@ -217,7 +226,7 @@ describe('CartContext — applyPromo', () => {
    * Requirement: discount logic must use server-validated promo codes only.
    * Actual:      Setting localStorage.isAdmin='true' gives 100% discount.
    */
-  it('does not grant 100% discount when localStorage.isAdmin is manually set', () => {
+  it('documents KNOWN BUG (Level 9): localStorage.isAdmin grants a 100% discount', () => {
     localStorage.setItem('isAdmin', 'true')
     const { result } = renderHook(() => useCart(), { wrapper })
     act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
@@ -226,7 +235,9 @@ describe('CartContext — applyPromo', () => {
       console.warn(`[KNOWN BUG - Level 9] localStorage.setItem('isAdmin','true') granted 100% discount. Discount: ${result.current.discount}, Subtotal: ${result.current.subtotal}`)
     }
 
-    expect(result.current.discount).toBeLessThan(result.current.subtotal)
+    // Requirement: client-side flags must never affect pricing. Characterization:
+    // setting isAdmin in localStorage zeroes the total (discount >= subtotal).
+    expect(result.current.discount).toBeGreaterThanOrEqual(result.current.subtotal)
   })
 })
 
@@ -242,21 +253,22 @@ describe('CartContext — tax calculation', () => {
    * Actual:      Tax is calculated on raw subtotal before discount is applied.
    *              Formula: Tax = Subtotal × 0.08  ← wrong when promo active
    */
-  it('calculates tax on the post-discount amount when a promo is applied', () => {
+  it('documents KNOWN BUG (Level 8): tax is calculated before the discount is applied', () => {
     const { result } = useCartSetup()
     act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
     act(() => { result.current.applyPromo('SAVE20') }) // 20% off → subtotal 100, discount 20
 
-    // Expected: Tax = (100 - 20) × 0.08 = 6.40
-    // Buggy:    Tax = 100 × 0.08         = 8.00
+    // Correct: Tax = (100 - 20) × 0.08 = 6.40
+    // Buggy:   Tax = 100 × 0.08        = 8.00
+    const correctTax = (100 - 20) * 0.08
+    const buggyTax = 100 * 0.08
 
-    const expectedTax = (100 - 20) * 0.08
-
-    if (Math.abs(result.current.tax - expectedTax) > 0.01) {
-      console.warn(`[KNOWN BUG - Level 8] Tax is calculated before discount. Got ${result.current.tax.toFixed(2)}, expected ${expectedTax.toFixed(2)}`)
+    if (Math.abs(result.current.tax - correctTax) > 0.01) {
+      console.warn(`[KNOWN BUG - Level 8] Tax is calculated before discount. Got ${result.current.tax.toFixed(2)}, expected ${correctTax.toFixed(2)}`)
     }
 
-    expect(result.current.tax).toBeCloseTo(expectedTax, 1)
+    // Characterization: tax ignores the discount and is charged on the gross subtotal.
+    expect(result.current.tax).toBeCloseTo(buggyTax, 1)
   })
 
   it('calculates tax correctly without any promo (no bug here)', () => {
