@@ -56,7 +56,34 @@ The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal u
       { method: 'PUT', path: '/api/v1/users/me', description: 'Updates user name/email. Should return 200 with updated user and display a success toast.', payloadTemplate: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}' },
       { method: 'GET', path: '/api/v1/users/me/orders', description: 'Returns past orders. Should be called when the Orders tab is clicked.' }
     ]);
-  }, [setRequirements, setDbTables, setApiEndpoints]);
+    setSolutions([
+      {
+        bugId: 'USER-01', title: 'API exposes passwordHash to frontend',
+        location: 'mockDatabase.ts / API response', technique: 'Security',
+        buggyCode: `// GET /api/v1/users/me returns full user row including passwordHash`,
+        fixedCode: `const { passwordHash, isAdmin, ...safeUser } = user;
+return safeUser; // only id, name, email`,
+        explanation: 'The user endpoint returns the full database row, including the password hash. Sensitive fields must be stripped server-side before sending the response.',
+      },
+      {
+        bugId: 'USER-02', title: '"Save Changes" button does nothing',
+        location: 'UserProfile.tsx', technique: 'Broken UI',
+        buggyCode: `<button className="btn btn-primary">Save Changes</button>`,
+        fixedCode: `<button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+// where handleSave calls PUT /api/v1/users/me and shows a toast`,
+        explanation: 'The Save Changes button has no onClick handler. Clicking it sends no request and displays no feedback.',
+      },
+      {
+        bugId: 'USER-03', title: 'Orders and Settings tabs do not switch content panel',
+        location: 'UserProfile.tsx', technique: 'Broken UI',
+        buggyCode: `// Sidebar buttons have no onClick and no activeTab state`,
+        fixedCode: `const [activeTab, setActiveTab] = useState('personal');
+<button onClick={() => setActiveTab('orders')}>Orders</button>
+{activeTab === 'orders' && <OrdersPanel />}`,
+        explanation: 'The sidebar tab buttons have no click handlers. The content panel always shows Personal Information regardless of which tab is clicked.',
+      },
+    ]);
+  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>

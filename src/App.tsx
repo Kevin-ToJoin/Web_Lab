@@ -1,13 +1,18 @@
 
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
-import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home } from 'lucide-react';
+import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus } from 'lucide-react';
 import './index.css';
 import { CatalogAppV02 } from './apps/catalog-v02';
 import { EcommerceApp } from './apps/EcommerceApp';
 import { BankApp } from './apps/BankApp';
 import { HealthcareApp } from './apps/HealthcareApp';
 import { TradingApp } from './apps/TradingApp';
+import { RegistrationApp } from './apps/RegistrationApp';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { BugReporterProvider } from './context/BugReporterContext';
+import { BugReporterButton } from './components/BugReporter/BugReporterButton';
+import { BugReporterModal } from './components/BugReporter/BugReporterModal';
+import { MyReportsPanel } from './components/BugReporter/MyReportsPanel';
 
 // --- Main Menu ---
 const MainMenu = () => {
@@ -63,6 +68,16 @@ const MainMenu = () => {
       difficultyColor: 'var(--danger)',
       icon: <LineChart size={24} className="app-icon" style={{ color: 'var(--danger)' }}/>,
       path: '/trading',
+    },
+    {
+      id: 'registration',
+      title: 'Registration Portal',
+      description: 'Multi-step form with validation, stale state & logic bugs.',
+      level: 'Levels 3–6',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <UserPlus size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/registration',
     }
   ];
 
@@ -194,6 +209,7 @@ const NotFound = () => (
 
 function App() {
   return (
+    <BugReporterProvider>
     <Router>
       <Routes>
         <Route path="/" element={<MainMenu />} />
@@ -222,9 +238,18 @@ function App() {
             <TradingApp />
           </ErrorBoundary>
         } />
+        <Route path="/registration/*" element={
+          <ErrorBoundary appName="Registration Portal">
+            <RegistrationApp />
+          </ErrorBoundary>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <BugReporterButton />
+      <BugReporterModal />
+      <MyReportsPanel />
     </Router>
+    </BugReporterProvider>
   );
 }
 

@@ -27,7 +27,31 @@ export const CheckoutShipping = () => {
     setApiEndpoints([
       { method: 'POST', path: '/api/v1/checkout/shipping', description: 'Calculates shipping fees based on ZIP.', payloadTemplate: `{\n  "zip": "${zip}"\n}` }
     ]);
-  }, [zip, setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'SHIP-01', title: 'Zip code accepts non-numeric characters',
+        location: 'CheckoutShipping.tsx', technique: 'Boundary Value',
+        buggyCode: `<input type="text" placeholder="ZIP Code" />`,
+        fixedCode: `<input type="text" pattern="[0-9]{5}" maxLength={5} placeholder="ZIP Code" />`,
+        explanation: 'Zip code input has no validation — letters, symbols, and values of any length are accepted.',
+      },
+      {
+        bugId: 'SHIP-02', title: 'Continue button skips all validation',
+        location: 'CheckoutShipping.tsx', technique: 'Boundary Value',
+        buggyCode: `const handleContinue = () => {
+  // BUG: No validation!
+  navigate('/catalog/checkout/payment');
+}`,
+        fixedCode: `const handleContinue = () => {
+  if (!address.trim()) return setError('Address is required');
+  if (!/^\\d{5}$/.test(zip)) return setError('ZIP must be 5 digits');
+  navigate('/catalog/checkout/payment');
+}`,
+        explanation: 'The Continue button navigates to Payment without checking whether address or ZIP are filled or valid.',
+      },
+    ]);
+  }, [zip, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   const handleContinue = () => {
     // BUG: Missing validation completely. It just navigates!

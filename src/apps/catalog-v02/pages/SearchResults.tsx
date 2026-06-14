@@ -34,11 +34,29 @@ export const SearchResults = () => {
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { 
-        method: 'GET', 
-        path: `/api/v1/search?q=${encodeURIComponent(query)}`, 
+      {
+        method: 'GET',
+        path: `/api/v1/search?q=${encodeURIComponent(query)}`,
         description: 'Queries the product database for the given term.',
       }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'SEARCH-01', title: 'Search returns all products when query is empty',
+        location: 'MockAPI.ts', technique: 'Boundary Value',
+        buggyCode: `if (query) { results = results.filter(...) }
+// Empty string is falsy, skips filter entirely`,
+        fixedCode: `if (query && query.trim().length > 0) { results = results.filter(...) }`,
+        explanation: 'An empty search query bypasses the filter, returning all products instead of zero results. Guard with a trimmed length check.',
+      },
+      {
+        bugId: 'SEARCH-02', title: 'XSS: query rendered with dangerouslySetInnerHTML',
+        location: 'SearchResults.tsx line 67', technique: 'Security (XSS)',
+        buggyCode: `<span dangerouslySetInnerHTML={{ __html: query }} />`,
+        fixedCode: `<span>{query}</span>`,
+        explanation: 'The search query is injected directly as raw HTML. An attacker can craft a URL with a <script> tag to execute arbitrary JavaScript in the victim\'s browser.',
+      },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
@@ -52,7 +70,7 @@ export const SearchResults = () => {
         setError(err.message);
         setLoading(false);
       });
-  }, [query, setRequirements, setDbTables, setApiEndpoints]);
+  }, [query, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   return (
     <div className="animate-fade-in">
