@@ -45,17 +45,16 @@ export const SearchResults = () => {
       {
         bugId: 'SEARCH-01', title: 'Search returns all products when query is empty',
         location: 'MockAPI.ts', technique: 'Boundary Value',
-        buggyCode: `if (query) { results = results.filter(...) }
-// Empty string is falsy, skips filter entirely`,
+        buggyCode: `if (query) { results = results.filter(...) }\n// Empty string is falsy, skips filter entirely`,
         fixedCode: `if (query && query.trim().length > 0) { results = results.filter(...) }`,
         explanation: 'An empty search query bypasses the filter, returning all products instead of zero results. Guard with a trimmed length check.',
       },
       {
-        bugId: 'SEARCH-02', title: 'XSS: query rendered with dangerouslySetInnerHTML',
-        location: 'SearchResults.tsx line 67', technique: 'Security (XSS)',
-        buggyCode: `<span dangerouslySetInnerHTML={{ __html: query }} />`,
-        fixedCode: `<span>{query}</span>`,
-        explanation: 'The search query is injected directly as raw HTML. An attacker can craft a URL with a <script> tag to execute arbitrary JavaScript in the victim\'s browser.',
+        bugId: 'SEARCH-02', title: 'Typo in product name "Wirless" instead of "Wireless"',
+        location: 'mockDatabase.ts', technique: 'Equivalence Partitioning',
+        buggyCode: `name: 'Wirless Noise-Cancelling Headphones'`,
+        fixedCode: `name: 'Wireless Noise-Cancelling Headphones'`,
+        explanation: 'A typo in the mock database causes the product name to appear misspelled in all views.',
       },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect

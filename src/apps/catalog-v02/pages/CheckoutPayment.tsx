@@ -52,6 +52,7 @@ CVC:    exactly 3 digits       (e.g. 123 ✓, abc ✗)
         payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card || ''}",\n  "expiry": "MM/YY",\n  "cvc": ""\n}`
       }
     ]);
+
     setSolutions([
       {
         bugId: 'PAY-01', title: 'Card number not Luhn-validated',

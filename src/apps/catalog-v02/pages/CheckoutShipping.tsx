@@ -37,18 +37,11 @@ export const CheckoutShipping = () => {
         explanation: 'Zip code input has no validation — letters, symbols, and values of any length are accepted.',
       },
       {
-        bugId: 'SHIP-02', title: 'Continue button skips all validation',
-        location: 'CheckoutShipping.tsx', technique: 'Boundary Value',
-        buggyCode: `const handleContinue = () => {
-  // BUG: No validation!
-  navigate('/catalog/checkout/payment');
-}`,
-        fixedCode: `const handleContinue = () => {
-  if (!address.trim()) return setError('Address is required');
-  if (!/^\\d{5}$/.test(zip)) return setError('ZIP must be 5 digits');
-  navigate('/catalog/checkout/payment');
-}`,
-        explanation: 'The Continue button navigates to Payment without checking whether address or ZIP are filled or valid.',
+        bugId: 'SHIP-02', title: 'Shipping method selection not persisted to order',
+        location: 'CheckoutShipping.tsx', technique: 'Stale State',
+        buggyCode: `// selected shipping method stored in local state, never passed forward`,
+        fixedCode: `// Pass shippingMethod to CartContext or query params before navigating`,
+        explanation: 'The chosen shipping method is held in local component state and discarded when navigating to Payment, so the order always defaults to standard shipping.',
       },
     ]);
   }, [zip, setRequirements, setDbTables, setApiEndpoints, setSolutions]);

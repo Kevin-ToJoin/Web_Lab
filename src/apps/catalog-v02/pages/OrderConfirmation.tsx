@@ -41,6 +41,7 @@ export const OrderConfirmation = () => {
       { method: 'GET', path: '/api/v1/orders/ORD-9999', description: 'Fetch the order receipt. In a real system the ID would be dynamic. Notice the total field returned.' },
       { method: 'DELETE', path: '/api/v1/cart', description: 'Should be called to clear the cart after a successful order. Is it being called?' }
     ]);
+
     setSolutions([
       {
         bugId: 'ORD-01', title: 'Order ID is always hardcoded as ORD-9999',

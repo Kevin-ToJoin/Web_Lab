@@ -40,6 +40,16 @@ const MainMenu = () => {
       path: '/ecommerce',
     },
     {
+      id: 'registration',
+      title: 'Registration Portal',
+      description: 'Multi-step form with state bugs',
+      level: 'Levels 3–6',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <UserPlus size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/registration',
+    },
+    {
       id: 'bank',
       title: 'Bank Core System',
       description: 'State transitions, session management & async submission bugs.',
@@ -68,16 +78,6 @@ const MainMenu = () => {
       difficultyColor: 'var(--danger)',
       icon: <LineChart size={24} className="app-icon" style={{ color: 'var(--danger)' }}/>,
       path: '/trading',
-    },
-    {
-      id: 'registration',
-      title: 'Registration Portal',
-      description: 'Multi-step form with validation, stale state & logic bugs.',
-      level: 'Levels 3–6',
-      difficulty: 'Medium',
-      difficultyColor: 'var(--primary)',
-      icon: <UserPlus size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
-      path: '/registration',
     }
   ];
 
@@ -210,45 +210,43 @@ const NotFound = () => (
 function App() {
   return (
     <BugReporterProvider>
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainMenu />} />
-        <Route path="/catalog/*" element={
-          <ErrorBoundary appName="Product Catalog">
-            <CatalogAppV02 />
-          </ErrorBoundary>
-        } />
-        <Route path="/ecommerce" element={
-          <ErrorBoundary appName="E-commerce Store">
-            <EcommerceApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/bank" element={
-          <ErrorBoundary appName="Bank Core System">
-            <BankApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/healthcare" element={
-          <ErrorBoundary appName="Patient Portal">
-            <HealthcareApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/trading" element={
-          <ErrorBoundary appName="Trading Dashboard">
-            <TradingApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/registration/*" element={
-          <ErrorBoundary appName="Registration Portal">
-            <RegistrationApp />
-          </ErrorBoundary>
-        } />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <BugReporterButton />
-      <BugReporterModal />
-      <MyReportsPanel />
-    </Router>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainMenu />} />
+          <Route path="/catalog/*" element={
+            <ErrorBoundary appName="Product Catalog">
+              <CatalogAppV02 />
+            </ErrorBoundary>
+          } />
+          <Route path="/ecommerce" element={
+            <ErrorBoundary appName="E-commerce Store">
+              <EcommerceApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/registration/*" element={
+            <ErrorBoundary><RegistrationApp /></ErrorBoundary>
+          } />
+          <Route path="/bank" element={
+            <ErrorBoundary appName="Bank Core System">
+              <BankApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/healthcare" element={
+            <ErrorBoundary appName="Patient Portal">
+              <HealthcareApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/trading" element={
+            <ErrorBoundary appName="Trading Dashboard">
+              <TradingApp />
+            </ErrorBoundary>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <BugReporterButton />
+        <BugReporterModal />
+        <MyReportsPanel />
+      </Router>
     </BugReporterProvider>
   );
 }

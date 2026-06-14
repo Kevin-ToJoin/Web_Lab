@@ -56,6 +56,7 @@ The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal u
       { method: 'PUT', path: '/api/v1/users/me', description: 'Updates user name/email. Should return 200 with updated user and display a success toast.', payloadTemplate: '{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}' },
       { method: 'GET', path: '/api/v1/users/me/orders', description: 'Returns past orders. Should be called when the Orders tab is clicked.' }
     ]);
+
     setSolutions([
       {
         bugId: 'USER-01', title: 'API exposes passwordHash to frontend',
@@ -74,7 +75,7 @@ return safeUser; // only id, name, email`,
         explanation: 'The Save Changes button has no onClick handler. Clicking it sends no request and displays no feedback.',
       },
       {
-        bugId: 'USER-03', title: 'Orders and Settings tabs do not switch content panel',
+        bugId: 'USER-03', title: "Orders and Settings tabs don't switch content panel",
         location: 'UserProfile.tsx', technique: 'Broken UI',
         buggyCode: `// Sidebar buttons have no onClick and no activeTab state`,
         fixedCode: `const [activeTab, setActiveTab] = useState('personal');
