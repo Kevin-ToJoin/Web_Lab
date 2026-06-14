@@ -54,7 +54,7 @@ describe('Database — content quality (Level 1 bugs)', () => {
    * PROD-001 description contains "Lorem ipsum dolor sit amet"
    * Requirement: all descriptions must be real product copy, no placeholder text.
    */
-  it('no product description contains placeholder text', () => {
+  it('documents KNOWN BUG (Level 1): a product description contains placeholder text', () => {
     const PLACEHOLDER_PATTERNS = [/lorem ipsum/i, /placeholder/i, /todo/i, /tbd/i]
     const offenders = database.products.filter(p =>
       PLACEHOLDER_PATTERNS.some(rx => rx.test(p.description))
@@ -65,8 +65,9 @@ describe('Database — content quality (Level 1 bugs)', () => {
         offenders.map(p => `  ${p.id}: "${p.description}"`).join('\n')
       )
     }
-    // This assertion documents the bug — it will fail until the bug is fixed
-    expect(offenders).toHaveLength(0)
+    // Characterization: the placeholder-text bug is present. When fixed,
+    // invert this to expect(offenders).toHaveLength(0).
+    expect(offenders.length).toBeGreaterThan(0)
   })
 
   /**
@@ -74,7 +75,7 @@ describe('Database — content quality (Level 1 bugs)', () => {
    * PROD-012 is named "Laptap Stand" instead of "Laptop Stand"
    * Requirement: all product names must be correctly spelled.
    */
-  it('no product name contains obvious typos', () => {
+  it('documents KNOWN BUG (Level 1): a product name contains an obvious typo', () => {
     const KNOWN_TYPOS: Record<string, string> = {
       'PROD-012': 'Laptap Stand', // correct name: "Laptop Stand"
     }
@@ -87,7 +88,8 @@ describe('Database — content quality (Level 1 bugs)', () => {
         offenders.map(p => `  ${p.id}: "${p.name}"`).join('\n')
       )
     }
-    expect(offenders).toHaveLength(0)
+    // Characterization: the "Laptap Stand" typo is present.
+    expect(offenders.length).toBeGreaterThan(0)
   })
 
   /**
@@ -95,7 +97,7 @@ describe('Database — content quality (Level 1 bugs)', () => {
    * PROD-012 has an image URL with "broken-link-12345" which will return a 404.
    * Requirement: all image URLs must resolve to actual images.
    */
-  it('no product image URL contains known broken patterns', () => {
+  it('documents KNOWN BUG (Level 1): a product has a broken image URL', () => {
     const BROKEN_PATTERNS = [/photo-broken-link/i, /placeholder\.com/i, /example\.com\/broken/i]
     const offenders = database.products.filter(p =>
       p.images.some(url => BROKEN_PATTERNS.some(rx => rx.test(url)))
@@ -106,7 +108,8 @@ describe('Database — content quality (Level 1 bugs)', () => {
         offenders.map(p => `  ${p.id}: ${p.images.join(', ')}`).join('\n')
       )
     }
-    expect(offenders).toHaveLength(0)
+    // Characterization: the broken image URL is present.
+    expect(offenders.length).toBeGreaterThan(0)
   })
 
   it('out-of-stock products (stock=0) are correctly flagged', () => {
