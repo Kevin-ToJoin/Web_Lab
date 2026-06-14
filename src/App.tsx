@@ -1,13 +1,18 @@
 
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
-import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home } from 'lucide-react';
+import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus } from 'lucide-react';
 import './index.css';
 import { CatalogAppV02 } from './apps/catalog-v02';
 import { EcommerceApp } from './apps/EcommerceApp';
 import { BankApp } from './apps/BankApp';
 import { HealthcareApp } from './apps/HealthcareApp';
 import { TradingApp } from './apps/TradingApp';
+import { RegistrationApp } from './apps/RegistrationApp';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { BugReporterProvider } from './context/BugReporterContext';
+import { BugReporterButton } from './components/BugReporter/BugReporterButton';
+import { BugReporterModal } from './components/BugReporter/BugReporterModal';
+import { MyReportsPanel } from './components/BugReporter/MyReportsPanel';
 
 // --- Main Menu ---
 const MainMenu = () => {
@@ -33,6 +38,16 @@ const MainMenu = () => {
       difficultyColor: 'var(--primary)',
       icon: <ShoppingCart size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
       path: '/ecommerce',
+    },
+    {
+      id: 'registration',
+      title: 'Registration Portal',
+      description: 'Multi-step form with state bugs',
+      level: 'Levels 3–6',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <UserPlus size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/registration',
     },
     {
       id: 'bank',
@@ -194,37 +209,45 @@ const NotFound = () => (
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainMenu />} />
-        <Route path="/catalog/*" element={
-          <ErrorBoundary appName="Product Catalog">
-            <CatalogAppV02 />
-          </ErrorBoundary>
-        } />
-        <Route path="/ecommerce" element={
-          <ErrorBoundary appName="E-commerce Store">
-            <EcommerceApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/bank" element={
-          <ErrorBoundary appName="Bank Core System">
-            <BankApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/healthcare" element={
-          <ErrorBoundary appName="Patient Portal">
-            <HealthcareApp />
-          </ErrorBoundary>
-        } />
-        <Route path="/trading" element={
-          <ErrorBoundary appName="Trading Dashboard">
-            <TradingApp />
-          </ErrorBoundary>
-        } />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+    <BugReporterProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainMenu />} />
+          <Route path="/catalog/*" element={
+            <ErrorBoundary appName="Product Catalog">
+              <CatalogAppV02 />
+            </ErrorBoundary>
+          } />
+          <Route path="/ecommerce" element={
+            <ErrorBoundary appName="E-commerce Store">
+              <EcommerceApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/registration/*" element={
+            <ErrorBoundary><RegistrationApp /></ErrorBoundary>
+          } />
+          <Route path="/bank" element={
+            <ErrorBoundary appName="Bank Core System">
+              <BankApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/healthcare" element={
+            <ErrorBoundary appName="Patient Portal">
+              <HealthcareApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/trading" element={
+            <ErrorBoundary appName="Trading Dashboard">
+              <TradingApp />
+            </ErrorBoundary>
+          } />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <BugReporterButton />
+        <BugReporterModal />
+        <MyReportsPanel />
+      </Router>
+    </BugReporterProvider>
   );
 }
 

@@ -9,7 +9,7 @@ export const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,11 +34,28 @@ export const SearchResults = () => {
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { 
-        method: 'GET', 
-        path: `/api/v1/search?q=${encodeURIComponent(query)}`, 
+      {
+        method: 'GET',
+        path: `/api/v1/search?q=${encodeURIComponent(query)}`,
         description: 'Queries the product database for the given term.',
       }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'SEARCH-01', title: 'Search returns all products when query is empty',
+        location: 'MockAPI.ts', technique: 'Boundary Value',
+        buggyCode: `if (query) { results = results.filter(...) }\n// Empty string is falsy, skips filter entirely`,
+        fixedCode: `if (query && query.trim().length > 0) { results = results.filter(...) }`,
+        explanation: 'An empty search query bypasses the filter, returning all products instead of zero results. Guard with a trimmed length check.',
+      },
+      {
+        bugId: 'SEARCH-02', title: 'Typo in product name "Wirless" instead of "Wireless"',
+        location: 'mockDatabase.ts', technique: 'Equivalence Partitioning',
+        buggyCode: `name: 'Wirless Noise-Cancelling Headphones'`,
+        fixedCode: `name: 'Wireless Noise-Cancelling Headphones'`,
+        explanation: 'A typo in the mock database causes the product name to appear misspelled in all views.',
+      },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
@@ -52,7 +69,7 @@ export const SearchResults = () => {
         setError(err.message);
         setLoading(false);
       });
-  }, [query, setRequirements, setDbTables, setApiEndpoints]);
+  }, [query, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   return (
     <div className="animate-fade-in">

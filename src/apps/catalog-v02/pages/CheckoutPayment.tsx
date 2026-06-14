@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 export const CheckoutPayment = () => {
   const navigate = useNavigate();
   const { total } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [card, setCard] = useState('');
 
@@ -52,7 +52,40 @@ CVC:    exactly 3 digits       (e.g. 123 ✓, abc ✗)
         payloadTemplate: `{\n  "amount": ${total},\n  "card": "${card || ''}",\n  "expiry": "MM/YY",\n  "cvc": ""\n}`
       }
     ]);
-  }, [total, card, setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'PAY-01', title: 'Card number not Luhn-validated',
+        location: 'CheckoutPayment.tsx', technique: 'Equivalence Partitioning',
+        buggyCode: `// no card validation before calling handlePay`,
+        fixedCode: `function luhn(n: string) {
+  return [...n].reverse().reduce((s,d,i) => {
+    let v = +d; if (i%2) { v*=2; if(v>9) v-=9; } return s+v;
+  }, 0) % 10 === 0;
+}
+if (!luhn(card.replace(/\\s/g,''))) { setError('Invalid card'); return; }`,
+        explanation: 'Any 16-character string passes as a valid card. The Luhn algorithm check is missing entirely.',
+      },
+      {
+        bugId: 'PAY-02', title: 'Expiry and CVC have no validation',
+        location: 'CheckoutPayment.tsx', technique: 'Equivalence Partitioning',
+        buggyCode: `// handlePay navigates immediately without checking expiry or cvc`,
+        fixedCode: `if (!/^(0[1-9]|1[0-2])\\/\\d{2}$/.test(expiry)) return setError('Invalid expiry');
+if (!/^\\d{3}$/.test(cvc)) return setError('Invalid CVC');`,
+        explanation: 'Expiry and CVC inputs are uncontrolled and never validated — empty or malformed values are silently accepted.',
+      },
+      {
+        bugId: 'PAY-03', title: 'Double-submit race condition on Authorize button',
+        location: 'CheckoutPayment.tsx', technique: 'Race Condition',
+        buggyCode: `<button onClick={handlePay}>Authorize Payment</button>`,
+        fixedCode: `const [loading, setLoading] = useState(false);
+<button disabled={loading} onClick={async () => { setLoading(true); await handlePay(); }}>
+  {loading ? 'Processing...' : 'Authorize Payment'}
+</button>`,
+        explanation: 'The button stays enabled during processing. Rapid double-click sends two charge requests to the payment API.',
+      },
+    ]);
+  }, [total, card, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   const handlePay = () => {
     // BUG: Race condition / Double submission

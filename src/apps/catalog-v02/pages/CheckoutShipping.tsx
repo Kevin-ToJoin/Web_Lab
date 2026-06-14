@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const CheckoutShipping = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');
@@ -27,7 +27,24 @@ export const CheckoutShipping = () => {
     setApiEndpoints([
       { method: 'POST', path: '/api/v1/checkout/shipping', description: 'Calculates shipping fees based on ZIP.', payloadTemplate: `{\n  "zip": "${zip}"\n}` }
     ]);
-  }, [zip, setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'SHIP-01', title: 'Zip code accepts non-numeric characters',
+        location: 'CheckoutShipping.tsx', technique: 'Boundary Value',
+        buggyCode: `<input type="text" placeholder="ZIP Code" />`,
+        fixedCode: `<input type="text" pattern="[0-9]{5}" maxLength={5} placeholder="ZIP Code" />`,
+        explanation: 'Zip code input has no validation — letters, symbols, and values of any length are accepted.',
+      },
+      {
+        bugId: 'SHIP-02', title: 'Shipping method selection not persisted to order',
+        location: 'CheckoutShipping.tsx', technique: 'Stale State',
+        buggyCode: `// selected shipping method stored in local state, never passed forward`,
+        fixedCode: `// Pass shippingMethod to CartContext or query params before navigating`,
+        explanation: 'The chosen shipping method is held in local component state and discarded when navigating to Payment, so the order always defaults to standard shipping.',
+      },
+    ]);
+  }, [zip, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   const handleContinue = () => {
     // BUG: Missing validation completely. It just navigates!

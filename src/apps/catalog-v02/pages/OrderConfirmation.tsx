@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const OrderConfirmation = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## Order Confirmation
@@ -41,7 +41,34 @@ export const OrderConfirmation = () => {
       { method: 'GET', path: '/api/v1/orders/ORD-9999', description: 'Fetch the order receipt. In a real system the ID would be dynamic. Notice the total field returned.' },
       { method: 'DELETE', path: '/api/v1/cart', description: 'Should be called to clear the cart after a successful order. Is it being called?' }
     ]);
-  }, [setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'ORD-01', title: 'Order ID is always hardcoded as ORD-9999',
+        location: 'OrderConfirmation.tsx', technique: 'Data Integrity',
+        buggyCode: `<p>Your simulated order ID is: <strong>ORD-9999</strong></p>`,
+        fixedCode: `const orderId = \`ORD-\${Math.floor(1000 + Math.random() * 9000)}\`;
+<p>Your simulated order ID is: <strong>{orderId}</strong></p>`,
+        explanation: 'The order ID is a hardcoded string literal. Every order shows the same ID, making it impossible to distinguish orders.',
+      },
+      {
+        bugId: 'ORD-02', title: 'Cart is not cleared after successful order',
+        location: 'OrderConfirmation.tsx', technique: 'Stale State',
+        buggyCode: `// No clearCart() call on this page`,
+        fixedCode: `const { clearCart } = useCart();
+useEffect(() => { clearCart(); }, []);`,
+        explanation: 'After a successful purchase the cart items are never removed. Going back shows the same items still in the cart.',
+      },
+      {
+        bugId: 'ORD-03', title: 'Order total saved as 0 instead of actual cart total',
+        location: 'OrderConfirmation.tsx', technique: 'Data Integrity',
+        buggyCode: `total: 0  // hardcoded in mock DB entry`,
+        fixedCode: `// Pass total via router state: navigate('/catalog/checkout/success', { state: { total } })
+// Then read: const { total } = useLocation().state`,
+        explanation: 'The order record stores total: 0 because the cart total is never passed to the confirmation page.',
+      },
+    ]);
+  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   return (
     <div className="animate-fade-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>

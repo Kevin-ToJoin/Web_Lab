@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 export const CategoryView = () => {
   const { catName } = useParams<{ catName: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +49,28 @@ The \`Products_Table\` below shows the **correct** expected dataset for category
         expectedResponse: JSON.stringify(database.products.filter(p => p.category === catName), null, 2)
       }
     ]);
+    setSolutions([
+      {
+        bugId: 'CAT-05', title: 'Home Goods filter includes Electronics products',
+        location: 'MockAPI.ts ~line 33', technique: 'Equivalence Partitioning',
+        buggyCode: `if (category === 'Home Goods' && p.category === 'Electronics') {
+  return true; // BUG: Electronics sneaks into Home Goods
+}
+return p.category === category;`,
+        fixedCode:  `return p.category === category;`,
+        explanation: 'A spurious if-block forces all Electronics products to be included when filtering by "Home Goods". Removing the extra branch fixes the filter.',
+      },
+      {
+        bugId: 'CAT-L10', title: 'Race condition: Electronics has 1500ms delay vs 300ms for others',
+        location: 'MockAPI.ts ~line 14', technique: 'Race Condition',
+        buggyCode: `const latency = category === 'Electronics' ? 1500 : 300;
+await delay(latency);`,
+        fixedCode:  `const latency = 300;
+await delay(latency);`,
+        explanation: 'Electronics responses take 1500ms while all others take 300ms. Rapidly switching categories causes a slower Electronics response to overwrite a faster Home Goods response — classic race condition.',
+      },
+    ]);
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     MockAPI.getProducts('', catName).then(data => {

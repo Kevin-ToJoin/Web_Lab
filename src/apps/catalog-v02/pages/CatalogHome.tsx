@@ -5,7 +5,7 @@ import { MockAPI } from '../api/MockAPI';
 import { type Product, database } from '../api/mockDatabase';
 
 export const CatalogHome = () => {
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,31 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
       { method: 'GET', path: '/api/v1/products/featured', description: 'Returns the 3 promoted products shown in the dashboard.' },
       { method: 'GET', path: '/api/v1/categories', description: 'Returns all available store categories with product counts.' },
       { method: 'GET', path: '/api/v1/promos/active', description: 'Returns currently active promotional banners.' }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'CAT-HOME-01', title: '"Shop Now" button has no navigation handler',
+        location: 'CatalogHome.tsx — hero banner button', technique: 'Missing Functionality',
+        buggyCode: `<button className="btn btn-secondary" style={{ background: '#000', border: 'none' }}>
+  Shop Now
+</button>`,
+        fixedCode:  `<button className="btn btn-secondary"
+  style={{ background: '#000', border: 'none' }}
+  onClick={() => navigate('/catalog/category/Electronics')}>
+  Shop Now
+</button>`,
+        explanation: 'The "Shop Now" button has no onClick handler. Clicking it does nothing. It should navigate to the sale category.',
+      },
+      {
+        bugId: 'CAT-HOME-02', title: 'Hero banner claims 50% off but promo2 is inactive',
+        location: 'CatalogHome.tsx — hero banner text / mockDatabase', technique: 'Content Bug',
+        buggyCode: `<p style={{ color: '#000', marginBottom: '2rem' }}>Up to 50% off selected electronics.</p>
+// DB: { id: 'promo2', active: false, discount: '50%' }`,
+        fixedCode:  `<p style={{ color: '#000', marginBottom: '2rem' }}>Up to 20% off selected electronics.</p>
+// Only promo1 (active: true, discount: '20%') should be advertised`,
+        explanation: 'The active promotion is promo1 (20% off). promo2 (50% off) is inactive. The banner is advertising a discount that is not running.',
+      },
     ]);
 
     // Fetch data

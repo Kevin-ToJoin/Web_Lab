@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, totalItems, subtotal, discount, tax, total, applyPromo } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const [promoCode, setPromoCode] = useState('');
   const [checkoutStatus, setCheckoutStatus] = useState('');
 
@@ -57,7 +57,65 @@ Total    = Subtotal - Discount + Tax
       { method: 'POST', path: '/api/v1/promos/apply', description: 'Validates promo code against approved list. Only SAVE20 and FALL10 are valid.', payloadTemplate: `{\n  "code": "${promoCode}"\n}` },
       { method: 'DELETE', path: '/api/v1/cart/{itemId}', description: 'Removes a specific item from the cart by its product ID.' }
     ]);
-  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'CART-01', title: 'Quantity can be reduced below 1',
+        location: 'CartContext.tsx', technique: 'Boundary Value',
+        buggyCode: `updateQuantity: (id, qty) => {
+  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
+}`,
+        fixedCode: `updateQuantity: (id, qty) => {
+  if (qty < 1) return;
+  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
+}`,
+        explanation: 'No lower-bound guard on quantity allows 0 or negative values, corrupting the cart total.',
+      },
+      {
+        bugId: 'CART-02', title: 'Total Items counter goes stale after remove',
+        location: 'CartContext.tsx', technique: 'Stale State',
+        buggyCode: `totalItems: items.length`,
+        fixedCode: `totalItems: items.reduce((s, i) => s + i.quantity, 0)`,
+        explanation: 'The totalItems value is derived from array length, not summed quantities, and falls out of sync when items are removed.',
+      },
+      {
+        bugId: 'CART-03', title: 'Remove always deletes first item, not the selected one',
+        location: 'CartContext.tsx', technique: 'Data Integrity',
+        buggyCode: `removeFromCart: (id) => setItems(items.filter((_, idx) => idx !== 0))`,
+        fixedCode: `removeFromCart: (id) => setItems(items.filter(i => i.id !== id))`,
+        explanation: 'The filter ignores the id parameter and always removes index 0, the first item in the list.',
+      },
+      {
+        bugId: 'CART-04', title: 'Promo regex accepts any code ending in "20"',
+        location: 'CartContext.tsx', technique: 'Regex',
+        buggyCode: `if (/20$/.test(code)) applyDiscount(0.20)`,
+        fixedCode: `const VALID: Record<string, number> = { 'SAVE20': 0.20, 'FALL10': 0.10 };
+if (VALID[code]) applyDiscount(VALID[code]);`,
+        explanation: 'The regex /20$/ matches any string ending with "20" (e.g., HACK20), bypassing the approved-codes list.',
+      },
+      {
+        bugId: 'CART-05', title: 'Tax applied before discount instead of after',
+        location: 'CartContext.tsx', technique: 'Logic Error',
+        buggyCode: `tax = subtotal * 0.08`,
+        fixedCode: `tax = (subtotal - discount) * 0.08`,
+        explanation: 'Tax must be computed on the post-discount amount. Applying it to the gross subtotal overcharges the customer.',
+      },
+      {
+        bugId: 'CART-06', title: 'isAdmin in localStorage grants 100% discount',
+        location: 'CartContext.tsx', technique: 'Security',
+        buggyCode: `if (localStorage.getItem('isAdmin') === 'true') setDiscount(subtotal)`,
+        fixedCode: `// Remove localStorage check — never trust client-side privilege flags`,
+        explanation: 'Any user can open DevTools and set isAdmin=true to zero out the cart total. Privilege checks must be server-side only.',
+      },
+      {
+        bugId: 'CART-07', title: 'Float drift causes checkout to fail for cent-value items',
+        location: 'CartPage.tsx', technique: 'Float Precision',
+        buggyCode: `if ((total * 100) % 1 !== 0)`,
+        fixedCode: `if (Math.abs((total * 100) % 1) > Number.EPSILON)`,
+        explanation: 'IEEE 754 floating-point arithmetic produces values like 120.0000000001. Strict % 1 === 0 fails; use Number.EPSILON tolerance.',
+      },
+    ]);
+  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   const handleCheckout = () => {
     // Level 10 BUG: Float precision strict equality.
