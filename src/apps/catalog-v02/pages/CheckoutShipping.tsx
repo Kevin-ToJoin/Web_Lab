@@ -25,7 +25,26 @@ export const CheckoutShipping = () => {
     });
 
     setApiEndpoints([
-      { method: 'POST', path: '/api/v1/checkout/shipping', description: 'Calculates shipping fees based on ZIP.', payloadTemplate: `{\n  "zip": "${zip}"\n}` }
+      {
+        method: 'POST', path: '/api/v1/checkout/shipping',
+        description: 'Calculates shipping fees based on ZIP.',
+        payloadTemplate: `{\n  "zip": "${zip}"\n}`,
+        handler: (requestBody: string) => {
+          let body: { zip?: string };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          const z = body.zip ?? '';
+          // BUG SHIP-01: only checks non-empty, never that it is 5 numeric digits,
+          // so non-numeric / wrong-length zips are accepted.
+          if (z.length > 0) {
+            return { status: 200, body: { accepted: true, zip: z, fee: 15 } };
+          }
+          return { status: 422, body: { accepted: false, error: 'ZIP is required' } };
+        },
+      }
     ]);
 
     setSolutions([

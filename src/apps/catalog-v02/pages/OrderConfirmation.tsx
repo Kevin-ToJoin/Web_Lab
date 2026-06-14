@@ -38,8 +38,27 @@ export const OrderConfirmation = () => {
     });
 
     setApiEndpoints([
-      { method: 'GET', path: '/api/v1/orders/ORD-9999', description: 'Fetch the order receipt. In a real system the ID would be dynamic. Notice the total field returned.' },
-      { method: 'DELETE', path: '/api/v1/cart', description: 'Should be called to clear the cart after a successful order. Is it being called?' }
+      {
+        method: 'GET', path: '/api/v1/orders/ORD-9999',
+        description: 'Fetch the order receipt. In a real system the ID would be dynamic. Notice the total field returned.',
+        handler: () => ({
+          // BUG ORD-01/ORD-03: hardcoded ID and total:0 — never reflects the real order.
+          status: 200,
+          body: {
+            id: 'ORD-9999',
+            status: 'Processing',
+            total: 0,
+            created_at: new Date().toISOString(),
+            items: [],
+          },
+        }),
+      },
+      {
+        method: 'DELETE', path: '/api/v1/cart',
+        description: 'Should be called to clear the cart after a successful order. Is it being called?',
+        // BUG ORD-02: cart is never actually cleared.
+        handler: () => ({ status: 200, body: { cleared: false } }),
+      }
     ]);
 
     setSolutions([

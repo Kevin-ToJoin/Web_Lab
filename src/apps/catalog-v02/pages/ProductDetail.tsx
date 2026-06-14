@@ -40,7 +40,19 @@ export const ProductDetail = () => {
     });
 
     setApiEndpoints([
-      { method: 'GET', path: `/api/v1/products/${id}`, description: 'Fetch product details.' },
+      {
+        method: 'GET',
+        path: `/api/v1/products/${id}`,
+        description: 'Fetch product details.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProductById(id || '');
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 404, body: { error: (e as Error).message } };
+          }
+        },
+      },
       { method: 'POST', path: '/api/v1/cart', description: 'Add item to cart.', payloadTemplate: '{\n  "productId": "PROD-1",\n  "qty": 1\n}' }
     ]);
 
