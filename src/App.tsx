@@ -247,7 +247,7 @@ function App() {
             </ErrorBoundary>
           } />
           <Route path="/registration/*" element={
-            <ErrorBoundary><RegistrationApp /></ErrorBoundary>
+            <ErrorBoundary appName="Registration Portal"><RegistrationApp /></ErrorBoundary>
           } />
           <Route path="/bank" element={
             <ErrorBoundary appName="Bank Core System">

@@ -64,6 +64,13 @@ export const SearchResults = () => {
         fixedCode: `name: 'Wireless Noise-Cancelling Headphones'`,
         explanation: 'A typo in the mock database causes the product name to appear misspelled in all views.',
       },
+      {
+        bugId: 'CAT-08', title: 'Search query rendered as raw HTML (XSS)',
+        location: 'SearchResults.tsx', technique: 'Security (XSS)',
+        buggyCode: `<span dangerouslySetInnerHTML={{ __html: query }} />`,
+        fixedCode: `<span>{query}</span>`,
+        explanation: 'The search term is injected with dangerouslySetInnerHTML, so a query like <b>x</b> or a <script> tag is rendered as live DOM — a stored/reflected XSS vector. Render it as plain text so React escapes it.',
+      },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);

@@ -75,25 +75,6 @@ export const ProductDetail = () => {
 </button>`,
         explanation: 'The `disabled` attribute is hardcoded with no conditional. The button should be enabled and trigger a wishlist action.',
       },
-      {
-        bugId: 'CAT-06b', title: 'Review textarea has no maxLength enforcement',
-        location: 'ProductDetail.tsx ~line 124', technique: 'Boundary Value',
-        buggyCode: `<textarea
-  className="input-field"
-  rows={3}
-  value={reviewText}
-  onChange={(e) => setReviewText(e.target.value)}
-  // BUG: Missing maxLength prop!
-/>`,
-        fixedCode:  `<textarea
-  className="input-field"
-  rows={3}
-  maxLength={50}
-  value={reviewText}
-  onChange={(e) => setReviewText(e.target.value)}
-/>`,
-        explanation: 'The label says max 50 chars but no `maxLength` attribute is set on the textarea. The submit handler also skips validation silently.',
-      },
     ]);
 
     if (id) {
