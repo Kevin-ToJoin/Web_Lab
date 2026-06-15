@@ -70,9 +70,10 @@ test.describe('Catalog Home', () => {
   })
 
   test('displays at least 3 featured product cards', async ({ page }) => {
-    // Wait for products to load from MockAPI
-    await page.waitForTimeout(500)
+    // Web-first wait: the lazy app chunk + MockAPI latency means a fixed timeout
+    // is unreliable. Wait for the first priced card, then assert the count.
     const cards = page.locator('.glass-panel').filter({ hasText: '$' })
+    await expect(cards.first()).toBeVisible()
     expect(await cards.count()).toBeGreaterThanOrEqual(3)
   })
 
@@ -120,9 +121,9 @@ test.describe('Category View', () => {
    */
   test('[BUG-L4] documents Home Goods leaking Electronics products', async ({ page }) => {
     await page.goto('/catalog/category/Home%20Goods')
-    await page.waitForTimeout(500)
 
     const productHeadings = page.locator('.glass-panel h4')
+    await expect(productHeadings.first()).toBeVisible()
     const count = await productHeadings.count()
 
     const knownElectronics = ['Ultra HD 4K Smart TV', 'Noise Cancelling Headphones', 'Smartwatch Pro', 'Wireless Mouse', 'Mechanical Keyboard', 'Gaming Monitor']

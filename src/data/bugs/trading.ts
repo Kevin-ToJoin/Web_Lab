@@ -25,7 +25,7 @@ export const tradingBugs: KnownBug[] = [
     keywords: ['fractional', 'quantity', 'shares', 'integer', 'boundary', 'decimal'] },
   { id: 'TRD-08', appId: 'trading', level: 10, technique: 'TOCTOU',
     title: 'Balance check uses a stale value (time-of-check)',
-    keywords: ['toctou', 'balance', 'stale', 'check', 'race', 'funds', 'closure'] },
+    keywords: ['balance', 'stale', 'check', 'race', 'funds', 'outdated'] },
   { id: 'TRD-09', appId: 'trading', level: 10, technique: 'Timezone',
     title: 'Market-closed check is off due to timezone',
     keywords: ['timezone', 'market', 'closed', 'hours', 'offset', 'open'] },

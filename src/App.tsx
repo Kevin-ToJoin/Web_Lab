@@ -1,13 +1,15 @@
 
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus } from 'lucide-react';
 import './index.css';
-import { CatalogAppV02 } from './apps/catalog-v02';
-import { EcommerceApp } from './apps/EcommerceApp';
-import { BankApp } from './apps/BankApp';
-import { HealthcareApp } from './apps/HealthcareApp';
-import { TradingApp } from './apps/TradingApp';
-import { RegistrationApp } from './apps/RegistrationApp';
+// Each app is code-split into its own lazy chunk to keep the initial bundle small.
+const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
+const EcommerceApp = lazy(() => import('./apps/EcommerceApp').then(m => ({ default: m.EcommerceApp })));
+const BankApp = lazy(() => import('./apps/BankApp').then(m => ({ default: m.BankApp })));
+const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
+const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
+const RegistrationApp = lazy(() => import('./apps/RegistrationApp').then(m => ({ default: m.RegistrationApp })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BugReporterProvider } from './context/BugReporterContext';
 import { BugReporterButton } from './components/BugReporter/BugReporterButton';
@@ -234,6 +236,11 @@ function App() {
   return (
     <BugReporterProvider>
       <Router>
+        <Suspense fallback={
+          <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', color: 'var(--text-muted)' }}>
+            <Bug size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" /> Loading…
+          </div>
+        }>
         <Routes>
           <Route path="/" element={<MainMenu />} />
           <Route path="/catalog/*" element={
@@ -266,6 +273,7 @@ function App() {
           } />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
         <BugReporterButton />
         <BugReporterModal />
         <MyReportsPanel />

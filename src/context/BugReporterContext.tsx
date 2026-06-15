@@ -36,12 +36,16 @@ const STORAGE_KEY = 'testlab101_reports';
 const matchKnownBug = (appId: string, title: string): string | undefined => {
   const lower = title.toLowerCase();
   const appBugs = knownBugs.filter(b => b.appId === appId);
+  // Pick the bug with the BEST keyword overlap (>= 2 hits), not merely the first
+  // one to reach the threshold. This disambiguates bugs with overlapping keywords.
+  let best: { id: string; hits: number } | undefined;
   for (const bug of appBugs) {
-    // Match if 2+ keywords from the known bug appear in the report title
-    const hits = bug.keywords.filter(kw => lower.includes(kw.toLowerCase()));
-    if (hits.length >= 2) return bug.id;
+    const hits = bug.keywords.filter(kw => lower.includes(kw.toLowerCase())).length;
+    if (hits >= 2 && (!best || hits > best.hits)) {
+      best = { id: bug.id, hits };
+    }
   }
-  return undefined;
+  return best?.id;
 };
 
 export const BugReporterProvider = ({ children }: { children: ReactNode }) => {
