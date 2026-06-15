@@ -10,7 +10,7 @@ test.describe('Trading App — QuantumTrader Pro', () => {
   })
 
   test('app loads with the QuantumTrader Pro heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'QuantumTrader Pro' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'QuantumTrader Pro', exact: true })).toBeVisible()
     await expect(page.getByText('Place Order')).toBeVisible()
   })
 

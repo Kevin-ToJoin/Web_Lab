@@ -1,10 +1,22 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { type Product } from '../api/mockDatabase';
 
 interface CartItem extends Product {
   quantity: number;
 }
+
+// Persist the cart so it survives a full page reload (real carts behave this way).
+// This does not alter any of the intentionally injected bugs below.
+const CART_KEY = 'tl101_catalog_cart';
+const loadCart = (): CartItem[] => {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(CART_KEY) : null;
+    return raw ? (JSON.parse(raw) as CartItem[]) : [];
+  } catch {
+    return [];
+  }
+};
 
 interface CartState {
   items: CartItem[];
@@ -22,12 +34,18 @@ interface CartState {
 const CartContext = createContext<CartState | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(loadCart);
   const [promo, setPromo] = useState<string>('');
-  
+
   // Level 5 BUG: Stale state
   // We keep totalItems separate and purposefully don't update it in some actions.
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalItems, setTotalItems] = useState(() => loadCart().reduce((acc, i) => acc + i.quantity, 0));
+
+  // Persist items across reloads (does not affect the stale-totalItems bug, which
+  // is about not updating the separate counter during a session).
+  useEffect(() => {
+    try { localStorage.setItem(CART_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+  }, [items]);
 
   const addToCart = (product: Product, qty: number) => {
     // Level 3 BUG: Boundary Value Analysis

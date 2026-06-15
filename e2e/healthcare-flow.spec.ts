@@ -10,7 +10,7 @@ test.describe('Healthcare App — MediPortal Connect', () => {
   })
 
   test('app loads with the MediPortal Connect heading', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'MediPortal Connect' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'MediPortal Connect', exact: true })).toBeVisible()
     await expect(page.getByText('Schedule Appointment')).toBeVisible()
   })
 
