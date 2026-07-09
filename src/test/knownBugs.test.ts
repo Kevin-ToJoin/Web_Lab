@@ -16,6 +16,10 @@ const EXPECTED_COUNTS: Record<string, number> = {
   healthcare: 14,
   trading: 14,
   hotel: 14,
+  delivery: 14,
+  exam: 14,
+  insurance: 14,
+  auth: 14,
 }
 
 const APP_IDS = Object.keys(EXPECTED_COUNTS) as (keyof typeof EXPECTED_COUNTS)[]

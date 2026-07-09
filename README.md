@@ -1,12 +1,12 @@
 # TestLab 101 — Web QA Training Platform
 
-A professional sandbox for QA engineers. Explore **7 real-looking web applications**, each
+A professional sandbox for QA engineers. Explore **11 real-looking web applications**, each
 containing **intentionally injected bugs** ranging from trivial (Level 1) to practically
 impossible (Level 10). Every app ships with an in-app **QA Inspector** (requirements, database
 viewer, live API tester, and locked solutions) and a global **Bug Reporter** for filing and
 scoring your findings.
 
-> **100 intentionally injected bugs** across 7 apps and 10 difficulty levels.
+> **170 intentionally injected bugs** across 11 apps and 10 difficulty levels.
 
 ---
 
@@ -75,14 +75,18 @@ npm run test:e2e:ui    # Run Playwright in interactive UI mode
 | **Patient Portal** (Healthcare) | `/healthcare` | Expert | 8–9 | **14** | Decision-table logic, complex date validation, unreachable branches |
 | **Trading Dashboard** | `/trading` | Impossible | 10 | **14** | Race conditions, floating-point cascades, timezone offset bugs |
 | **Hotel Booking** (StayEasy) | `/hotel` | Medium | 3–6 | **14** | Date-range logic, occupancy boundaries, pricing math, overbooking, timezone |
-| | | | | **114** | **Total** |
+| **Food Delivery** (QuickBite) | `/delivery` | Medium | 3–5 | **14** | Delivery zones, time windows, order minimums, promo stacking, tip math |
+| **Online Exam** (CertifyHub) | `/exam` | Hard | 5–7 | **14** | Countdown timer/auto-submit, pass-cutoff boundaries, scoring, negative marking |
+| **Insurance Quote** (SecureQuote) | `/insurance` | Expert | 7–9 | **14** | Multi-factor decision tables, premium multipliers, discount clamps |
+| **Account Security** (VaultAuth) | `/auth` | Expert | 6–9 | **14** | Password strength, token expiry, rate-limit lockout, sessions, 2FA, user enumeration |
+| | | | | **170** | **Total** |
 
 > The hub page (`/`) lists every app with its difficulty badge and level range. The cards above
 > match the difficulty labels shown in-app. Note that the on-hub "Levels 1–2" copy for Product
 > Catalog reflects its starting levels; its bug registry actually spans Levels 1–10.
 
 Bug counts are sourced from the modular registry in `src/data/bugs/` and aggregated in
-`src/data/knownBugs.ts` (`TOTAL_BUGS = 114`).
+`src/data/knownBugs.ts` (`TOTAL_BUGS = 170`).
 
 ---
 

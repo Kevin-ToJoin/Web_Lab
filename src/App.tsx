@@ -1,7 +1,7 @@
 
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
-import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus, BedDouble } from 'lucide-react';
+import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus, BedDouble, Utensils, GraduationCap, ShieldCheck, KeyRound } from 'lucide-react';
 import './index.css';
 // Each app is code-split into its own lazy chunk to keep the initial bundle small.
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
@@ -11,6 +11,10 @@ const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ def
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
 const RegistrationApp = lazy(() => import('./apps/RegistrationApp').then(m => ({ default: m.RegistrationApp })));
 const HotelApp = lazy(() => import('./apps/HotelApp').then(m => ({ default: m.HotelApp })));
+const DeliveryApp = lazy(() => import('./apps/DeliveryApp').then(m => ({ default: m.DeliveryApp })));
+const ExamApp = lazy(() => import('./apps/ExamApp').then(m => ({ default: m.ExamApp })));
+const InsuranceApp = lazy(() => import('./apps/InsuranceApp').then(m => ({ default: m.InsuranceApp })));
+const AuthApp = lazy(() => import('./apps/AuthApp').then(m => ({ default: m.AuthApp })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BugReporterProvider } from './context/BugReporterContext';
 import { BugReporterButton } from './components/BugReporter/BugReporterButton';
@@ -94,6 +98,46 @@ const MainMenu = () => {
       difficultyColor: 'var(--primary)',
       icon: <BedDouble size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
       path: '/hotel',
+    },
+    {
+      id: 'delivery',
+      title: 'Food Delivery (QuickBite)',
+      description: 'Delivery zones, time windows, order minimums, promo stacking & tip math.',
+      level: 'Levels 3–5',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <Utensils size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/delivery',
+    },
+    {
+      id: 'exam',
+      title: 'Online Exam (CertifyHub)',
+      description: 'Timer/auto-submit, pass-cutoff boundaries, scoring & negative marking.',
+      level: 'Levels 5–7',
+      difficulty: 'Hard',
+      difficultyColor: '#eab308',
+      icon: <GraduationCap size={24} className="app-icon" style={{ color: '#eab308' }}/>,
+      path: '/exam',
+    },
+    {
+      id: 'insurance',
+      title: 'Insurance Quote (SecureQuote)',
+      description: 'Multi-factor decision tables, premium multipliers & discount clamps.',
+      level: 'Levels 7–9',
+      difficulty: 'Expert',
+      difficultyColor: 'var(--secondary)',
+      icon: <ShieldCheck size={24} className="app-icon" style={{ color: 'var(--secondary)' }}/>,
+      path: '/insurance',
+    },
+    {
+      id: 'auth',
+      title: 'Account Security (VaultAuth)',
+      description: 'Password strength, token expiry, rate-limit lockout, sessions & 2FA.',
+      level: 'Levels 6–9',
+      difficulty: 'Expert',
+      difficultyColor: 'var(--secondary)',
+      icon: <KeyRound size={24} className="app-icon" style={{ color: 'var(--secondary)' }}/>,
+      path: '/auth',
     }
   ];
 
@@ -285,6 +329,26 @@ function App() {
           <Route path="/hotel" element={
             <ErrorBoundary appName="Hotel Booking (StayEasy)">
               <HotelApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/delivery" element={
+            <ErrorBoundary appName="Food Delivery (QuickBite)">
+              <DeliveryApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/exam" element={
+            <ErrorBoundary appName="Online Exam (CertifyHub)">
+              <ExamApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/insurance" element={
+            <ErrorBoundary appName="Insurance Quote (SecureQuote)">
+              <InsuranceApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/auth" element={
+            <ErrorBoundary appName="Account Security (VaultAuth)">
+              <AuthApp />
             </ErrorBoundary>
           } />
           <Route path="*" element={<NotFound />} />
