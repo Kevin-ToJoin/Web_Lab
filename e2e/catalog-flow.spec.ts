@@ -10,7 +10,22 @@
  * Run:   npx playwright test
  */
 
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+
+// Add the currently-open product to the cart and wait until the cart has
+// actually persisted to localStorage before continuing. This replaces fixed
+// `waitForTimeout` sleeps: the CartContext writes to localStorage in a
+// useEffect, so navigating away too early can load an empty cart.
+const addOpenProductToCart = async (page: Page) => {
+  const addBtn = page.getByRole('button', { name: 'Add to Cart' })
+  await expect(addBtn).toBeVisible()
+  await addBtn.click()
+  await page.waitForFunction(() => {
+    const raw = localStorage.getItem('tl101_catalog_cart')
+    if (!raw) return false
+    try { return JSON.parse(raw).length > 0 } catch { return false }
+  })
+}
 
 // ─── Hub ──────────────────────────────────────────────────────────────────────
 
@@ -107,7 +122,6 @@ test.describe('Catalog Home', () => {
 test.describe('Category View', () => {
   test('shows products after navigation', async ({ page }) => {
     await page.goto('/catalog/category/Apparel')
-    await page.waitForTimeout(500)
     await expect(page.getByText('Category: Apparel')).toBeVisible()
     // Apparel should have products
     const products = page.locator('.glass-panel h4')
@@ -144,7 +158,6 @@ test.describe('Category View', () => {
 test.describe('Product Detail', () => {
   test('displays product name, price, and add-to-cart button', async ({ page }) => {
     await page.goto('/catalog/product/PROD-001')
-    await page.waitForTimeout(700)
     await expect(page.getByText('Ultra HD 4K Smart TV').first()).toBeVisible()
     await expect(page.getByText('$599.99').first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'Add to Cart' })).toBeVisible()
@@ -157,8 +170,9 @@ test.describe('Product Detail', () => {
    */
   test('[BUG-L2] documents Back to Catalog navigating to an invalid URL', async ({ page }) => {
     await page.goto('/catalog/product/PROD-001')
-    await page.waitForTimeout(700)
-    await page.getByRole('button', { name: 'Back to Catalog' }).click()
+    const backBtn = page.getByRole('button', { name: 'Back to Catalog' })
+    await expect(backBtn).toBeVisible()
+    await backBtn.click()
     await expect(page).toHaveURL(/invalid-url/)
   })
 
@@ -169,8 +183,8 @@ test.describe('Product Detail', () => {
    */
   test('[BUG-L2] documents Add to Wishlist being permanently disabled', async ({ page }) => {
     await page.goto('/catalog/product/PROD-001')
-    await page.waitForTimeout(700)
     const wishlistBtn = page.getByRole('button', { name: 'Add to Wishlist' })
+    await expect(wishlistBtn).toBeVisible()
     await expect(wishlistBtn).toBeDisabled()
   })
 })
@@ -180,14 +194,12 @@ test.describe('Product Detail', () => {
 test.describe('Search Results', () => {
   test('shows results matching the search query', async ({ page }) => {
     await page.goto('/catalog/search?q=keyboard')
-    await page.waitForTimeout(500)
     await expect(page.getByRole('heading', { name: 'Search Results' }).first()).toBeVisible()
     await expect(page.getByText('Mechanical Keyboard').first()).toBeVisible()
   })
 
   test('shows error message when API returns 500', async ({ page }) => {
     await page.goto('/catalog/search?q=error')
-    await page.waitForTimeout(500)
     await expect(page.getByText(/500 Internal Server Error/)).toBeVisible()
   })
 
@@ -200,7 +212,7 @@ test.describe('Search Results', () => {
   test('[BUG-L9] documents search query being rendered as raw HTML (XSS)', async ({ page }) => {
     const xssPayload = '<b>bold</b>'
     await page.goto(`/catalog/search?q=${encodeURIComponent(xssPayload)}`)
-    await page.waitForTimeout(500)
+    await expect(page.getByRole('heading', { name: 'Search Results' }).first()).toBeVisible()
 
     const renderedBold = await page.locator('p b').count()
     if (renderedBold > 0) {
@@ -215,9 +227,7 @@ test.describe('Search Results', () => {
 test.describe('Cart', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/catalog/product/PROD-003')
-    await page.waitForTimeout(700)
-    await page.getByRole('button', { name: 'Add to Cart' }).click()
-    await page.waitForTimeout(300) // let the cart persist to localStorage
+    await addOpenProductToCart(page)
     await page.goto('/catalog/cart')
   })
 
@@ -249,13 +259,14 @@ test.describe('Cart', () => {
 
 test.describe('Checkout Shipping', () => {
   test.beforeEach(async ({ page }) => {
-    // Add an item and get to cart first
+    // Add an item, then route straight to the shipping step. We deliberately do
+    // NOT click the cart's "Checkout" button: it runs the CART-07 float-drift
+    // check, which rejects most totals with a payment error and never navigates.
+    // This block tests the shipping form itself, and the cart is persisted in
+    // localStorage, so a direct navigation is both valid and deterministic.
     await page.goto('/catalog/product/PROD-005')
-    await page.waitForTimeout(700)
-    await page.getByRole('button', { name: 'Add to Cart' }).click()
-    await page.waitForTimeout(300) // let the cart persist to localStorage
-    await page.goto('/catalog/cart')
-    await page.getByRole('button', { name: 'Checkout' }).click()
+    await addOpenProductToCart(page)
+    await page.goto('/catalog/checkout/shipping')
   })
 
   /**
