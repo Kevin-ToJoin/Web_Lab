@@ -43,10 +43,12 @@ test.describe('Main Hub', () => {
 
   test('shows difficulty badges for each app', async ({ page }) => {
     await page.goto('/')
+    // Several difficulty labels now repeat across the 11 app cards (e.g. two
+    // "Hard", three "Expert"), so use .first() to avoid strict-mode collisions.
     await expect(page.getByText('Easy', { exact: true })).toBeVisible()
     await expect(page.getByText('Medium', { exact: true }).first()).toBeVisible()
-    await expect(page.getByText('Hard', { exact: true })).toBeVisible()
-    await expect(page.getByText('Expert', { exact: true })).toBeVisible()
+    await expect(page.getByText('Hard', { exact: true }).first()).toBeVisible()
+    await expect(page.getByText('Expert', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('Impossible', { exact: true })).toBeVisible()
   })
 
