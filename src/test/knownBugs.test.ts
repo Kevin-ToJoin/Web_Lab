@@ -8,8 +8,6 @@
 import { describe, it, expect } from 'vitest'
 import { knownBugs, TOTAL_BUGS } from '../data/knownBugs'
 
-const APP_IDS = ['catalog', 'registration', 'ecommerce', 'bank', 'healthcare', 'trading'] as const
-
 const EXPECTED_COUNTS: Record<string, number> = {
   catalog: 30,
   registration: 14,
@@ -17,15 +15,23 @@ const EXPECTED_COUNTS: Record<string, number> = {
   bank: 14,
   healthcare: 14,
   trading: 14,
+  hotel: 14,
+  delivery: 14,
+  exam: 14,
+  insurance: 14,
+  auth: 14,
 }
 
+const APP_IDS = Object.keys(EXPECTED_COUNTS) as (keyof typeof EXPECTED_COUNTS)[]
+const EXPECTED_TOTAL = Object.values(EXPECTED_COUNTS).reduce((a, b) => a + b, 0)
+
 describe('knownBugs registry — totals', () => {
-  it('TOTAL_BUGS is 100', () => {
-    expect(TOTAL_BUGS).toBe(100)
+  it(`TOTAL_BUGS is ${EXPECTED_TOTAL}`, () => {
+    expect(TOTAL_BUGS).toBe(EXPECTED_TOTAL)
   })
 
-  it('knownBugs.length is 100', () => {
-    expect(knownBugs.length).toBe(100)
+  it(`knownBugs.length is ${EXPECTED_TOTAL}`, () => {
+    expect(knownBugs.length).toBe(EXPECTED_TOTAL)
   })
 
   it('all bug ids are unique', () => {
@@ -46,9 +52,9 @@ describe('knownBugs registry — per-app counts', () => {
     })
   }
 
-  it('the six expected counts sum to 100', () => {
+  it(`the expected counts sum to ${EXPECTED_TOTAL}`, () => {
     const sum = Object.values(EXPECTED_COUNTS).reduce((a, b) => a + b, 0)
-    expect(sum).toBe(100)
+    expect(sum).toBe(EXPECTED_TOTAL)
   })
 })
 
@@ -86,7 +92,7 @@ describe('knownBugs registry — field shape', () => {
     }
   })
 
-  it('every bug appId is one of the six known ids', () => {
+  it('every bug appId is one of the known ids', () => {
     for (const bug of knownBugs) {
       expect(APP_IDS).toContain(bug.appId as (typeof APP_IDS)[number])
     }
