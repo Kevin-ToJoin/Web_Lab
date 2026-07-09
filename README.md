@@ -1,12 +1,12 @@
 # TestLab 101 — Web QA Training Platform
 
-A professional sandbox for QA engineers. Explore **6 real-looking web applications**, each
+A professional sandbox for QA engineers. Explore **7 real-looking web applications**, each
 containing **intentionally injected bugs** ranging from trivial (Level 1) to practically
 impossible (Level 10). Every app ships with an in-app **QA Inspector** (requirements, database
 viewer, live API tester, and locked solutions) and a global **Bug Reporter** for filing and
 scoring your findings.
 
-> **100 intentionally injected bugs** across 6 apps and 10 difficulty levels.
+> **100 intentionally injected bugs** across 7 apps and 10 difficulty levels.
 
 ---
 
@@ -64,7 +64,7 @@ npm run test:e2e:ui    # Run Playwright in interactive UI mode
 
 ---
 
-## The 6 Testing Environments
+## The Testing Environments
 
 | App | Route | Difficulty | Bug Levels | Bug Count | Focus / Techniques |
 |-----|-------|-----------|-----------|:---------:|--------------------|
@@ -74,14 +74,15 @@ npm run test:e2e:ui    # Run Playwright in interactive UI mode
 | **Bank Core System** | `/bank` | Hard | 6–8 | **14** | State transitions, session management, async submission/race conditions |
 | **Patient Portal** (Healthcare) | `/healthcare` | Expert | 8–9 | **14** | Decision-table logic, complex date validation, unreachable branches |
 | **Trading Dashboard** | `/trading` | Impossible | 10 | **14** | Race conditions, floating-point cascades, timezone offset bugs |
-| | | | | **100** | **Total** |
+| **Hotel Booking** (StayEasy) | `/hotel` | Medium | 3–6 | **14** | Date-range logic, occupancy boundaries, pricing math, overbooking, timezone |
+| | | | | **114** | **Total** |
 
 > The hub page (`/`) lists every app with its difficulty badge and level range. The cards above
 > match the difficulty labels shown in-app. Note that the on-hub "Levels 1–2" copy for Product
 > Catalog reflects its starting levels; its bug registry actually spans Levels 1–10.
 
 Bug counts are sourced from the modular registry in `src/data/bugs/` and aggregated in
-`src/data/knownBugs.ts` (`TOTAL_BUGS = 100`).
+`src/data/knownBugs.ts` (`TOTAL_BUGS = 114`).
 
 ---
 

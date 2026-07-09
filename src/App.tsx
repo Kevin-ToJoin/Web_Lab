@@ -1,7 +1,7 @@
 
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
-import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus } from 'lucide-react';
+import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus, BedDouble } from 'lucide-react';
 import './index.css';
 // Each app is code-split into its own lazy chunk to keep the initial bundle small.
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
@@ -10,6 +10,7 @@ const BankApp = lazy(() => import('./apps/BankApp').then(m => ({ default: m.Bank
 const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
 const RegistrationApp = lazy(() => import('./apps/RegistrationApp').then(m => ({ default: m.RegistrationApp })));
+const HotelApp = lazy(() => import('./apps/HotelApp').then(m => ({ default: m.HotelApp })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BugReporterProvider } from './context/BugReporterContext';
 import { BugReporterButton } from './components/BugReporter/BugReporterButton';
@@ -83,6 +84,16 @@ const MainMenu = () => {
       difficultyColor: 'var(--danger)',
       icon: <LineChart size={24} className="app-icon" style={{ color: 'var(--danger)' }}/>,
       path: '/trading',
+    },
+    {
+      id: 'hotel',
+      title: 'Hotel Booking (StayEasy)',
+      description: 'Date-range logic, occupancy limits, pricing math & overbooking.',
+      level: 'Levels 3–6',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <BedDouble size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/hotel',
     }
   ];
 
@@ -269,6 +280,11 @@ function App() {
           <Route path="/trading" element={
             <ErrorBoundary appName="Trading Dashboard">
               <TradingApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/hotel" element={
+            <ErrorBoundary appName="Hotel Booking (StayEasy)">
+              <HotelApp />
             </ErrorBoundary>
           } />
           <Route path="*" element={<NotFound />} />
