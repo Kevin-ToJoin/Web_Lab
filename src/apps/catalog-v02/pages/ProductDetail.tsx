@@ -19,7 +19,7 @@ export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,8 +51,16 @@ export const ProductDetail = () => {
 ### Acceptance Criteria:
 - Display product image, name, category, and price.
 - Must be able to select quantity and add to cart.
-- Must display customer reviews.
-- **Bug Hint:** Look at the DB view. Are those reviews really from this product ID?`);
+- The "Back to Catalog" button must return the user to the catalog home page.
+- The "Add to Wishlist" button must be enabled and functional.
+- Review textarea must enforce a maximum of 50 characters.
+- Must display customer reviews for the **current** product only.
+
+### Bug Hints (3 bugs on this page):
+- 🐛 **Level 2:** Try clicking "Back to Catalog" — where does it actually go?
+- 🐛 **Level 2:** Is there any button that appears broken/disabled when it should work?
+- 🐛 **Level 3:** The review form says max 50 chars. Can you submit more than that?
+- 🐛 **Level 7:** Look at the DB viewer. Do the reviews shown match this product's ID?`);
 
     const p = database.products.find(x => x.id === id);
     setDbTables({
@@ -61,8 +69,41 @@ export const ProductDetail = () => {
     });
 
     setApiEndpoints([
-      { method: 'GET', path: `/api/v1/products/${id}`, description: 'Fetch product details.' },
+      {
+        method: 'GET',
+        path: `/api/v1/products/${id}`,
+        description: 'Fetch product details.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProductById(id || '');
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 404, body: { error: (e as Error).message } };
+          }
+        },
+      },
       { method: 'POST', path: '/api/v1/cart', description: 'Add item to cart.', payloadTemplate: '{\n  "productId": "PROD-1",\n  "qty": 1\n}' }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'CAT-03', title: 'Back button navigates to invalid URL',
+        location: 'ProductDetail.tsx ~line 69', technique: 'Broken Link',
+        buggyCode: `onClick={() => navigate('/catalog/invalid-url')}`,
+        fixedCode:  `onClick={() => navigate('/catalog')}`,
+        explanation: 'The onClick handler has a hardcoded typo. It navigates to a non-existent route instead of the catalog home.',
+      },
+      {
+        bugId: 'CAT-04', title: 'Add to Wishlist button is permanently disabled',
+        location: 'ProductDetail.tsx ~line 106', technique: 'Broken UI',
+        buggyCode: `<button className="btn btn-secondary" disabled>
+  Add to Wishlist
+</button>`,
+        fixedCode:  `<button className="btn btn-secondary" onClick={handleAddToWishlist}>
+  Add to Wishlist
+</button>`,
+        explanation: 'The `disabled` attribute is hardcoded with no conditional. The button should be enabled and trigger a wishlist action.',
+      },
     ]);
 
     if (id) {

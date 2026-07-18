@@ -8,7 +8,7 @@ import { ArrowLeft, Star } from 'lucide-react';
 export const ReviewsView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,10 +31,18 @@ export const ReviewsView = () => {
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { 
-        method: 'GET', 
-        path: `/api/v1/products/${id}/reviews`, 
+      {
+        method: 'GET',
+        path: `/api/v1/products/${id}/reviews`,
         description: 'Fetches all reviews for the product.',
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProductById(id || '');
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 404, body: { error: (e as Error).message } };
+          }
+        },
       },
       {
         method: 'POST',
@@ -42,6 +50,30 @@ export const ReviewsView = () => {
         description: 'Submits a new review.',
         payloadTemplate: '{\n  "userId": "U-999",\n  "rating": 5,\n  "comment": "Amazing!"\n}'
       }
+    ]);
+
+    setSolutions([
+      {
+        bugId: 'REV-01', title: 'Average rating ignores new reviews (stale calculation)',
+        location: 'ReviewsView.tsx', technique: 'Stale State',
+        buggyCode: `const avg = product.rating; // snapshot from initial load`,
+        fixedCode: `const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;`,
+        explanation: 'The displayed average is taken from the initial product data, not recomputed when new reviews are added.',
+      },
+      {
+        bugId: 'REV-02', title: 'Rating allows 0 stars (out of valid 1-5 range)',
+        location: 'ReviewsView.tsx', technique: 'Boundary Value',
+        buggyCode: `<option value="0">0 stars</option>`,
+        fixedCode: `// Remove the 0-star option; default select to 1`,
+        explanation: 'A zero-star option exists in the rating selector. Valid ratings must be 1–5 per the acceptance criteria.',
+      },
+      {
+        bugId: 'CAT-06', title: 'PROD-002 displays reviews belonging to PROD-001',
+        location: 'MockAPI.ts — getProductById', technique: 'Data Integrity',
+        buggyCode: `if (id === 'PROD-002') {\n  product.reviews = database.products.find(p => p.id === 'PROD-001').reviews;\n}`,
+        fixedCode: `// Return the product's own reviews; remove the PROD-001 substitution.`,
+        explanation: 'getProductById swaps in PROD-001\'s reviews when fetching PROD-002, so the wrong reviews are shown. Open PROD-002 and compare against the DB viewer.',
+      },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
@@ -51,7 +83,7 @@ export const ReviewsView = () => {
         setLoading(false);
       }).catch(() => setLoading(false));
     }
-  }, [id, setRequirements, setDbTables, setApiEndpoints]);
+  }, [id, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   if (loading) return <div className="container">Loading reviews...</div>;
   if (!product) return <div className="container">Product Not Found</div>;

@@ -16,6 +16,7 @@
   
   --success: #10b981; /* Emerald 500 */
   
+  --text-primary: #f8fafc; /* Slate 50 — alias */
   --text-main: #f8fafc; /* Slate 50 */
   --text-muted: #cbd5e1; /* Slate 300 */
   --text-disabled: #64748b; /* Slate 500 */
@@ -172,4 +173,38 @@ p {
 /* Glowing text effect */
 .text-glow {
   text-shadow: 0 0 20px var(--primary-glow);
+}
+
+/* ── Accessibility: keyboard focus ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Button disabled state ───────────────────────────────────────────────── */
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Skeleton loader ─────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position:  600px 0; }
+}
+
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 1200px 100%;
+  animation: shimmer 1.6s infinite linear;
 }

@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 export const CategoryView = () => {
   const { catName } = useParams<{ catName: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,25 +16,69 @@ export const CategoryView = () => {
     // 1. Inject Requirements
     setRequirements(`## Category View: ${catName}
 ### Acceptance Criteria:
-- Only products matching the category "${catName}" should be displayed.
-- The UI should indicate a loading state while fetching.
-- Pagination should allow viewing more items if results exceed 10.
-- **Bug Hint:** The mock database relationships might be flawed! Look at the actual returned API data in the API tab.`);
+- **Only** products whose \`category\` field exactly matches \`"${catName}"\` should appear.
+- The UI must show a loading indicator while results are being fetched.
+- Each product card must show the correct name, price, and image.
+- Product names must contain no typos.
+- If a category has no products, show a friendly "No products found" message.
+
+### Bug Hints (2 bugs in this area):
+- 🐛 **Level 4 (Equivalence):** Navigate to **Home Goods**. Do all displayed products actually belong to that category? Use the DB Viewer to cross-check — \`Products_Table\` shows the ground truth.
+- 🐛 **Level 10 (Race Condition):** Navigate to **Electronics**, then quickly click **Home Goods** before the list loads. Which category's results appear? Try it multiple times.
+
+### DB Cross-check:
+The \`Products_Table\` below shows the **correct** expected dataset for category \`"${catName}"\`. Compare it against what the UI actually renders.`);
 
     // 2. Inject DB Tables
     setDbTables({
       'Products_Table': database.products.filter(p => p.category === catName),
+      'All_Products_By_Category': [
+        { category: 'Electronics', count: database.products.filter(p => p.category === 'Electronics').length },
+        { category: 'Home Goods', count: database.products.filter(p => p.category === 'Home Goods').length },
+        { category: 'Apparel', count: database.products.filter(p => p.category === 'Apparel').length },
+        { category: 'Accessories', count: database.products.filter(p => p.category === 'Accessories').length }
+      ]
     });
 
     // 3. Inject API Endpoints
     setApiEndpoints([
-      { 
-        method: 'GET', 
-        path: `/api/v1/products?category=${catName}`, 
-        description: 'Fetches products for the specified category.',
-        expectedResponse: JSON.stringify(database.products.filter(p => p.category === catName).slice(0, 2), null, 2)
+      {
+        method: 'GET',
+        path: `/api/v1/products?category=${catName}`,
+        description: `Fetches products for category "${catName}". Expected: ${database.products.filter(p => p.category === catName).length} items. Click Send to see what the API actually returns.`,
+        expectedResponse: JSON.stringify(database.products.filter(p => p.category === catName), null, 2),
+        handler: async () => {
+          try {
+            const data = await MockAPI.getProducts('', catName);
+            return { status: 200, body: data };
+          } catch (e) {
+            return { status: 500, body: { error: (e as Error).message } };
+          }
+        }
       }
     ]);
+    setSolutions([
+      {
+        bugId: 'CAT-05', title: 'Home Goods filter includes Electronics products',
+        location: 'MockAPI.ts ~line 33', technique: 'Equivalence Partitioning',
+        buggyCode: `if (category === 'Home Goods' && p.category === 'Electronics') {
+  return true; // BUG: Electronics sneaks into Home Goods
+}
+return p.category === category;`,
+        fixedCode:  `return p.category === category;`,
+        explanation: 'A spurious if-block forces all Electronics products to be included when filtering by "Home Goods". Removing the extra branch fixes the filter.',
+      },
+      {
+        bugId: 'CAT-L10', title: 'Race condition: Electronics has 1500ms delay vs 300ms for others',
+        location: 'MockAPI.ts ~line 14', technique: 'Race Condition',
+        buggyCode: `const latency = category === 'Electronics' ? 1500 : 300;
+await delay(latency);`,
+        fixedCode:  `const latency = 300;
+await delay(latency);`,
+        explanation: 'Electronics responses take 1500ms while all others take 300ms. Rapidly switching categories causes a slower Electronics response to overwrite a faster Home Goods response — classic race condition.',
+      },
+    ]);
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     MockAPI.getProducts('', catName).then(data => {

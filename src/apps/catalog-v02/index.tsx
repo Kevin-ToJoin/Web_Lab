@@ -1,4 +1,3 @@
-import { BugTrackerProvider } from './context/BugTrackerContext';
 import { CartProvider } from './context/CartContext';
 import { QAPanelProvider } from './context/QAPanelContext';
 import { Routes, Route } from 'react-router-dom';
@@ -19,10 +18,9 @@ import { UserProfile } from './pages/UserProfile';
 
 export const CatalogAppV02 = () => {
   return (
-    <BugTrackerProvider>
-      <CartProvider>
-        <QAPanelProvider>
-          <Routes>
+    <CartProvider>
+      <QAPanelProvider>
+        <Routes>
             <Route path="/" element={<CatalogV02Layout />}>
               <Route index element={<CatalogHome />} />
               <Route path="category/:catName" element={<CategoryView />} />
@@ -35,9 +33,8 @@ export const CatalogAppV02 = () => {
               <Route path="checkout/success" element={<OrderConfirmation />} />
               <Route path="profile" element={<UserProfile />} />
             </Route>
-          </Routes>
-        </QAPanelProvider>
-      </CartProvider>
-    </BugTrackerProvider>
+        </Routes>
+      </QAPanelProvider>
+    </CartProvider>
   );
 };

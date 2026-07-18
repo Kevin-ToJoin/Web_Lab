@@ -7,29 +7,152 @@ import { useNavigate } from 'react-router-dom';
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, totalItems, subtotal, discount, tax, total, applyPromo } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
   const [promoCode, setPromoCode] = useState('');
   const [checkoutStatus, setCheckoutStatus] = useState('');
 
   useEffect(() => {
     setRequirements(`## Shopping Cart
 ### Acceptance Criteria:
-- Modifying quantity updates total instantly.
-- Subtotal + Tax - Discount = Total.
-- Cannot add negative items.
-- Checkout validates that sum is exact.
-- **Bug Hint:** The floating point math might slowly drift off the exact integer!`);
+- Quantity can only be **1 or more** — zero and negative values must be rejected.
+- Removing an item must remove **only that specific item**, regardless of its ID or position.
+- \`Total Items\` counter must update immediately after every add, update, or remove action.
+- Tax (8%) must be calculated on the **post-discount** subtotal, not the pre-discount subtotal.
+- Promo code \`SAVE20\` applies 20% off. Any code not in the approved list must be rejected.
+- The displayed Total must be mathematically exact: \`(Subtotal × 1.08) - Discount\`.
+- Checkout must fail gracefully if floating-point precision causes the total to drift.
+
+### Bug Hints (7 bugs in this area):
+- 🐛 **Level 3 (Boundary):** Click the **−** button when quantity is 1. Can the quantity go to 0 or negative? What happens to the cart total?
+- 🐛 **Level 5 (Stale State):** Add a product, then **remove** it. Does the "Total Items" counter update correctly?
+- 🐛 **Level 7 (Data Integrity):** Add **PROD-001** (Ultra HD 4K Smart TV) to the cart, then add another product, then try to remove PROD-001. Which item actually disappears?
+- 🐛 **Level 8 (Regex):** The valid promo codes are \`SAVE20\` and \`FALL10\`. Try entering a fake code that ends in "20" (e.g., \`HACK20\`, \`AAA20\`). Does it get accepted?
+- 🐛 **Level 8 (Logic):** Apply a promo code and check the order summary. Is the 8% tax applied on the **discounted** amount or the **full** subtotal? Check the DB for the expected formula.
+- 🐛 **Level 9 (Security):** Open your browser console and run \`localStorage.setItem('isAdmin', 'true')\`, then refresh the cart. What happens to the total?
+- 🐛 **Level 10 (Float):** Add items whose prices have cents (e.g., $249.50). After tax calculations, try clicking Checkout. Does the payment validation pass every time?
+
+### Expected Formula:
+\`\`\`
+Subtotal = sum(price × qty)
+Discount = Subtotal × promo_rate   ← if promo applied
+Tax      = (Subtotal - Discount) × 0.08   ← must apply AFTER discount
+Total    = Subtotal - Discount + Tax
+\`\`\``);
 
     setDbTables({
-      'Cart_Memory_State': items,
-      'Promo_Codes_DB': [{ code: 'SAVE20', discount: 0.2 }, { code: 'FALL10', discount: 0.1 }]
+      'Cart_State': items.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.quantity, lineTotal: i.price * i.quantity })),
+      'Promo_Codes_DB': [
+        { code: 'SAVE20', discount_rate: 0.20, status: 'ACTIVE' },
+        { code: 'FALL10', discount_rate: 0.10, status: 'ACTIVE' }
+      ],
+      'Cart_Totals_Expected': [{
+        subtotal: subtotal.toFixed(4),
+        note_tax: 'Tax = (subtotal - discount) × 0.08',
+        note_actual: 'Tax = subtotal × 0.08  ← BUG if promo applied'
+      }]
     });
 
     setApiEndpoints([
-      { method: 'POST', path: '/api/v1/checkout/validate', description: 'Validates cart sums.', payloadTemplate: `{\n  "total": ${total}\n}` },
-      { method: 'POST', path: '/api/v1/promos/apply', description: 'Validates promo code.', payloadTemplate: `{\n  "code": "${promoCode}"\n}` }
+      {
+        method: 'POST', path: '/api/v1/checkout/validate',
+        description: 'Strict float-equality check. Fails if total has any floating-point drift beyond 2 decimal places.',
+        payloadTemplate: `{\n  "total": ${total}\n}`,
+        handler: (requestBody: string) => {
+          let body: { total?: number };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          // BUG CART-07: strict float-equality; drift like 120.0000000001 fails.
+          const t = Number(body.total);
+          const floatDrift = (t * 100) % 1;
+          if (floatDrift !== 0) {
+            return { status: 422, body: { ok: false, error: `Amount mismatch. Expected ${t.toFixed(2)} but received ${t}.` } };
+          }
+          return { status: 200, body: { ok: true, total: t } };
+        },
+      },
+      {
+        method: 'POST', path: '/api/v1/promos/apply',
+        description: 'Validates promo code against approved list. Only SAVE20 and FALL10 are valid.',
+        payloadTemplate: `{\n  "code": "${promoCode}"\n}`,
+        handler: (requestBody: string) => {
+          let body: { code?: string };
+          try {
+            body = JSON.parse(requestBody);
+          } catch {
+            return { status: 400, body: { error: 'Invalid JSON' } };
+          }
+          const code = body.code || '';
+          // BUG CART-04: regex accepts ANY code ending in "20" (e.g. HACK20).
+          if (/.*20$/.test(code)) {
+            return { status: 200, body: { accepted: true, code, discountRate: 0.20 } };
+          }
+          return { status: 200, body: { accepted: false, code } };
+        },
+      },
+      { method: 'DELETE', path: '/api/v1/cart/{itemId}', description: 'Removes a specific item from the cart by its product ID.' }
     ]);
-  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints]);
+
+    setSolutions([
+      {
+        bugId: 'CART-01', title: 'Quantity can be reduced below 1',
+        location: 'CartContext.tsx', technique: 'Boundary Value',
+        buggyCode: `updateQuantity: (id, qty) => {
+  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
+}`,
+        fixedCode: `updateQuantity: (id, qty) => {
+  if (qty < 1) return;
+  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
+}`,
+        explanation: 'No lower-bound guard on quantity allows 0 or negative values, corrupting the cart total.',
+      },
+      {
+        bugId: 'CART-02', title: 'Total Items counter goes stale after remove',
+        location: 'CartContext.tsx', technique: 'Stale State',
+        buggyCode: `totalItems: items.length`,
+        fixedCode: `totalItems: items.reduce((s, i) => s + i.quantity, 0)`,
+        explanation: 'The totalItems value is derived from array length, not summed quantities, and falls out of sync when items are removed.',
+      },
+      {
+        bugId: 'CART-03', title: 'Remove always deletes first item, not the selected one',
+        location: 'CartContext.tsx', technique: 'Data Integrity',
+        buggyCode: `removeFromCart: (id) => setItems(items.filter((_, idx) => idx !== 0))`,
+        fixedCode: `removeFromCart: (id) => setItems(items.filter(i => i.id !== id))`,
+        explanation: 'The filter ignores the id parameter and always removes index 0, the first item in the list.',
+      },
+      {
+        bugId: 'CART-04', title: 'Promo regex accepts any code ending in "20"',
+        location: 'CartContext.tsx', technique: 'Regex',
+        buggyCode: `if (/20$/.test(code)) applyDiscount(0.20)`,
+        fixedCode: `const VALID: Record<string, number> = { 'SAVE20': 0.20, 'FALL10': 0.10 };
+if (VALID[code]) applyDiscount(VALID[code]);`,
+        explanation: 'The regex /20$/ matches any string ending with "20" (e.g., HACK20), bypassing the approved-codes list.',
+      },
+      {
+        bugId: 'CART-05', title: 'Tax applied before discount instead of after',
+        location: 'CartContext.tsx', technique: 'Logic Error',
+        buggyCode: `tax = subtotal * 0.08`,
+        fixedCode: `tax = (subtotal - discount) * 0.08`,
+        explanation: 'Tax must be computed on the post-discount amount. Applying it to the gross subtotal overcharges the customer.',
+      },
+      {
+        bugId: 'CART-06', title: 'isAdmin in localStorage grants 100% discount',
+        location: 'CartContext.tsx', technique: 'Security',
+        buggyCode: `if (localStorage.getItem('isAdmin') === 'true') setDiscount(subtotal)`,
+        fixedCode: `// Remove localStorage check — never trust client-side privilege flags`,
+        explanation: 'Any user can open DevTools and set isAdmin=true to zero out the cart total. Privilege checks must be server-side only.',
+      },
+      {
+        bugId: 'CART-07', title: 'Float drift causes checkout to fail for cent-value items',
+        location: 'CartPage.tsx', technique: 'Float Precision',
+        buggyCode: `if ((total * 100) % 1 !== 0)`,
+        fixedCode: `if (Math.abs((total * 100) % 1) > Number.EPSILON)`,
+        explanation: 'IEEE 754 floating-point arithmetic produces values like 120.0000000001. Strict % 1 === 0 fails; use Number.EPSILON tolerance.',
+      },
+    ]);
+  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
 
   const handleCheckout = () => {
     // Level 10 BUG: Float precision strict equality.
@@ -82,13 +205,13 @@ export const CartPage = () => {
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
-                      <span style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+                      <button type="button" aria-label={`Decrease quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity - 1)}>-</button>
+                      <span aria-live="polite" aria-label={`Quantity: ${item.quantity}`} style={{ minWidth: '20px', textAlign: 'center' }}>{item.quantity}</span>
+                      <button type="button" aria-label={`Increase quantity of ${item.name}`} className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem' }} onClick={() => updateQuantity(item.id, item.quantity + 1)}>+</button>
                     </div>
-                    
-                    <button className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
-                      <Trash2 size={16} />
+
+                    <button type="button" aria-label={`Remove ${item.name} from cart`} className="btn btn-secondary" style={{ color: 'var(--danger)', padding: '0.5rem' }} onClick={() => removeFromCart(item.id)}>
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
@@ -139,8 +262,8 @@ export const CartPage = () => {
                 onChange={(e) => setPromoCode(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <button className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
-                <Tag size={18} />
+              <button type="button" aria-label="Apply promo code" className="btn btn-secondary" onClick={() => applyPromo(promoCode)}>
+                <Tag size={18} aria-hidden="true" />
               </button>
             </div>
           </div>
