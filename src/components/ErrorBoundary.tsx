@@ -20,7 +20,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     this.setState({ hasError: false, message: '' });
-    window.location.href = '/';
+    // Full reload (not a router navigate) to guarantee a clean remount after a crash.
+    // Uses Vite's BASE_URL so this still lands on the hub when served under /Lab101.
+    window.location.href = import.meta.env.BASE_URL;
   };
 
   render() {
