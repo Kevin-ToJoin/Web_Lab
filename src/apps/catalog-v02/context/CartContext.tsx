@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { type Product } from '../api/mockDatabase';
 
 interface CartItem extends Product {
@@ -17,9 +17,14 @@ interface CartState {
   tax: number;
   total: number;
   applyPromo: (code: string) => void;
+  mergeGuestCart: () => void;
 }
 
 const CartContext = createContext<CartState | undefined>(undefined);
+
+// BUG-091: Stale Cache — module-level cache that never invalidates.
+// If a product's price changes after first add, the old cached price is used.
+const productCache = new Map<string, Product>();
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -29,23 +34,57 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   // We keep totalItems separate and purposefully don't update it in some actions.
   const [totalItems, setTotalItems] = useState(0);
 
-  const addToCart = (product: Product, qty: number) => {
+  // BUG-090: Local Storage Quota — saves entire cart state to localStorage
+  // on every single state change, potentially filling up storage quota.
+  useEffect(() => {
+    try {
+      localStorage.setItem('cart_backup', JSON.stringify({
+        items,
+        totalItems,
+        promo,
+        timestamp: Date.now()
+      }));
+    } catch {
+      // BUG-090: silently swallows quota exceeded errors
+    }
+  }, [items, totalItems, promo]);
+
+  const addToCart = useCallback(async (product: Product, qty: number) => {
+    // BUG-091: Stale Cache — cache product on first add, use cached version thereafter.
+    // If the product's price was updated, the stale cached price is used.
+    if (!productCache.has(product.id)) {
+      productCache.set(product.id, product);
+    }
+    const cachedProduct = productCache.get(product.id)!;
+
+    // BUG-084: Race Condition on Quantity — artificial delay causes stale closure reads.
+    // Rapid clicks will read the same `items` value from the closure.
+    await new Promise(r => setTimeout(r, 200));
+
     // Level 3 BUG: Boundary Value Analysis
     // Fails to block qty = 0 or negative quantities.
-    
+
+    // BUG-084: Uses closure `items` (stale) instead of callback `prev` to check existence.
+    const existing = items.find(i => i.id === cachedProduct.id);
+
     setItems(prev => {
-      const existing = prev.find(i => i.id === product.id);
       if (existing) {
-        return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + qty } : i);
+        return prev.map(i => i.id === cachedProduct.id ? { ...i, quantity: i.quantity + qty } : i);
       }
-      return [...prev, { ...product, quantity: qty }];
+      return [...prev, { ...cachedProduct, quantity: qty }];
     });
 
     // We correctly update total items here...
     setTotalItems(prev => prev + qty);
-  };
+  }, [items]);
 
   const removeFromCart = (id: string) => {
+    // BUG-058: Cannot Remove Last Cart Item — prevents removing the last item
+    // (unless it's PROD-001 which has its own separate bug below).
+    if (items.length <= 1 && id !== 'PROD-001') {
+      return;
+    }
+
     // Level 7 BUG: Data Integrity
     // If you try to remove PROD-001, it accidentally removes the FIRST item in the array instead!
     setItems(prev => {
@@ -57,12 +96,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return prev.filter(i => i.id !== id);
     });
     
-    // Level 5 BUG: Stale State
-    // We intentionally forget to update totalItems when an item is removed.
+    // BUG-025: Cart Stale State (Removal)
+    // We intentionally forget to call setTotalItems when an item is removed.
+    // The totalItems count stays stale after removal.
   };
 
   const updateQuantity = (id: string, qty: number) => {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: qty } : i));
+    // BUG-031: Data Integrity Cart Update — index-based mutation.
+    // Directly mutates the previous array instead of creating a new one,
+    // which can cause React to skip re-renders because the reference is the same.
+    setItems(prev => {
+      const idx = prev.indexOf(prev.find(i => i.id === id)!);
+      prev[idx] = { ...prev[idx], quantity: qty };
+      return prev; // returns same array reference — React may not re-render
+    });
     // We update total items by recounting (this fixes the stale state, making the bug erratic! - Level 5)
     setTotalItems(items.reduce((acc, i) => acc + i.quantity, 0)); 
   };
@@ -73,8 +120,32 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     // The regex below is flawed, it accepts anything ending in "20" as 20% off.
     if (code.match(/.*20$/)) {
       setPromo('20OFF');
+    // BUG-056: Coupon Code Case Sensitivity — FALL10 only matches exact uppercase.
+    // 'fall10' or 'Fall10' won't work.
     } else if (code === 'FALL10') {
       setPromo('10OFF');
+    // BUG-033: Zero Price Checkout — FLAT50 subtracts $50 flat with no floor clamp.
+    // If subtotal is $30, total goes to -$20.
+    } else if (code === 'FLAT50') {
+      setPromo('50FLAT');
+    }
+  };
+
+  // BUG-089: Context State Mutated Directly — mergeGuestCart pushes directly
+  // into the items array instead of using setItems with spread.
+  const mergeGuestCart = () => {
+    const guestData = localStorage.getItem('guest_cart');
+    if (guestData) {
+      try {
+        const guestItems = JSON.parse(guestData) as CartItem[];
+        // BUG-089: Direct mutation of state array
+        guestItems.forEach(gi => {
+          items.push(gi);
+        });
+        setItems([...items]); // spread to trigger re-render, but mutation already happened
+      } catch {
+        // ignore parse errors
+      }
     }
   };
 
@@ -95,6 +166,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     discount = subtotal * 0.20;
   } else if (promo === '10OFF') {
     discount = subtotal * 0.10;
+  } else if (promo === '50FLAT') {
+    // BUG-033: Flat $50 discount with no Math.max(0, total) guard.
+    // Can produce negative totals.
+    discount = 50;
   }
 
   // Level 9 BUG: Security/Session
@@ -104,12 +179,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     discount = subtotal; 
   }
 
+  // BUG-033: No Math.max(0, ...) guard — total can go negative
   const total = subtotal + tax - discount;
 
   return (
     <CartContext.Provider value={{
       items, addToCart, removeFromCart, updateQuantity,
-      totalItems, subtotal, discount, tax, total, applyPromo
+      totalItems, subtotal, discount, tax, total, applyPromo, mergeGuestCart
     }}>
       {children}
     </CartContext.Provider>

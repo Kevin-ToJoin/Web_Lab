@@ -24,7 +24,7 @@ export const database = {
   products: [
     {
       id: 'PROD-001',
-      name: 'Ultra HD 4K Smart TV',
+      name: 'Ultra Premium 4K Smart TV with AI-Enhanced Noise-Cancelling Audio System and Built-in Streaming', // BUG-037: Very long name causes mobile viewport overflow (no text-overflow: ellipsis on cards)
       category: 'Electronics',
       price: 599.99,
       stock: 50,
