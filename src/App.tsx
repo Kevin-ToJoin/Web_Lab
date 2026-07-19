@@ -6,7 +6,7 @@ import './index.css';
 // Each app is code-split into its own lazy chunk to keep the initial bundle small.
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
 const EcommerceApp = lazy(() => import('./apps/ecommerce').then(m => ({ default: m.EcommerceApp })));
-const BankApp = lazy(() => import('./apps/BankApp').then(m => ({ default: m.BankApp })));
+const BankApp = lazy(() => import('./apps/bank').then(m => ({ default: m.BankApp })));
 const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
 const RegistrationApp = lazy(() => import('./apps/registration').then(m => ({ default: m.RegistrationApp })));
@@ -311,7 +311,7 @@ function App() {
           <Route path="/registration/*" element={
             <ErrorBoundary appName="Registration Portal"><RegistrationApp /></ErrorBoundary>
           } />
-          <Route path="/bank" element={
+          <Route path="/bank/*" element={
             <ErrorBoundary appName="Bank Core System">
               <BankApp />
             </ErrorBoundary>
