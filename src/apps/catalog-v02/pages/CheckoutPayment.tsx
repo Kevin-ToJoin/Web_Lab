@@ -20,10 +20,14 @@ export const CheckoutPayment = () => {
 - The "Authorize Payment" button must be **disabled** while a payment request is processing to prevent double charges.
 - On success, redirect to the Order Confirmation page.
 
-### Bug Hints (3 bugs on this page):
+### Bug Hints (7 bugs on this page):
 - 🐛 **Level 4 (Equivalence):** Enter a clearly invalid card number like \`1234 5678 9012 3456\` or \`0000 0000 0000 0000\`. Does the form reject it?
 - 🐛 **Level 4 (Equivalence):** Leave the Expiry and CVC fields empty and click Authorize. Does validation fire?
 - 🐛 **Level 8 (Race Condition):** Click the "Authorize Payment" button **twice very quickly**. Check the Transactions Ledger — how many charge requests were sent?
+- 🐛 **Level 3 (Boundary):** Try typing 40 digits into the Card Number field. Is there any limit or formatting?
+- 🐛 **Level 7:** Open the Cart in another step of the flow, note the total, then imagine it changed before you clicked Authorize. Is the charged amount ever re-checked at that moment?
+- 🐛 **Level 2 (UX):** Type a 16-digit card number. Does it space itself out like the example format shown above?
+- 🐛 **Level 2:** Is there any way to go back to the Shipping step from this page?
 
 ### Expected Card Validation:
 \`\`\`
@@ -102,6 +106,41 @@ if (!/^\\d{3}$/.test(cvc)) return setError('Invalid CVC');`,
   {loading ? 'Processing...' : 'Authorize Payment'}
 </button>`,
         explanation: 'The button stays enabled during processing. Rapid double-click sends two charge requests to the payment API.',
+      },
+      {
+        bugId: 'PAY-04', title: 'Card number field has no maxLength or formatting',
+        location: 'CheckoutPayment.tsx — card input', technique: 'Boundary Value',
+        buggyCode: `<input type="text" className="input-field" value={card} onChange={e => setCard(e.target.value)} placeholder="0000 0000 0000 0000" />`,
+        fixedCode: `<input type="text" maxLength={19} value={formatCardNumber(card)} onChange={...} placeholder="0000 0000 0000 0000" />`,
+        explanation: 'Any length or character set can be typed into the card field — there is no client-side constraint matching the 16-digit requirement.',
+      },
+      {
+        bugId: 'PAY-05', title: 'Charged amount is never re-validated at charge time',
+        location: 'CheckoutPayment.tsx — handlePay', technique: 'Data Integrity',
+        buggyCode: `const { total } = useCart(); // read once at render
+const handlePay = () => { navigate('/catalog/checkout/success'); }; // never re-checks total`,
+        fixedCode: `const handlePay = () => {
+  const current = useCart().total; // re-derive at click time
+  chargeCard(current);
+};`,
+        explanation: 'The charge amount is whatever `total` happened to be at the last render — nothing re-verifies it matches the cart immediately before authorizing.',
+      },
+      {
+        bugId: 'PAY-06', title: 'Card number has no auto-formatting as you type',
+        location: 'CheckoutPayment.tsx — card input', technique: 'UX',
+        buggyCode: `value={card} onChange={e => setCard(e.target.value)} // raw digits, no grouping`,
+        fixedCode: `onChange={e => setCard(formatWithSpaces(e.target.value))} // "4532 0151 1283 0366"`,
+        explanation: 'The requirements show a spaced example format, but the input never groups digits — every real payment form does this for readability.',
+      },
+      {
+        bugId: 'PAY-07', title: 'No "Back to Shipping" link exists on this page',
+        location: 'CheckoutPayment.tsx — page layout', technique: 'Missing Functionality',
+        buggyCode: `<h1>Payment Details</h1>
+{/* every other checkout step has a back button — this one doesn't */}`,
+        fixedCode: `<button onClick={() => navigate('/catalog/checkout/shipping')}>
+  <ArrowLeft size={18} /> Back to Shipping
+</button>`,
+        explanation: 'Unlike Cart and Shipping, this page gives no way to correct a mistyped address without using the browser\'s Back button.',
       },
     ]);
   }, [total, card, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
