@@ -17,10 +17,14 @@ export const UserProfile = () => {
 - The **Settings** tab must be navigable and functional.
 - All sidebar tabs must change the content panel when clicked.
 
-### Bug Hints (3 bugs on this page):
+### Bug Hints (7 bugs on this page):
 - 🐛 **Level 9 (Security):** Click the API tab and call \`GET /api/v1/users/me\`. Inspect the response — what sensitive fields are being sent to the frontend that should never leave the server?
 - 🐛 **Level 2 (Broken UI):** Click the "Save Changes" button. Does anything happen? Is there a success message, an error, or nothing at all? Check the Network/API tab.
 - 🐛 **Level 2 (Broken UI):** Click the "Orders" and "Settings" tabs in the sidebar. Do they change the content panel? Can you see your past orders from the DB?
+- 🐛 **Level 3 (Accessibility):** Click directly on the "Full Name" label text. Does focus move to the input field?
+- 🐛 **Level 4:** Type a new name into the Full Name field, then inspect React DevTools' component state. Did it change?
+- 🐛 **Level 3 (Accessibility):** Inspect the sidebar tab buttons — is there any programmatic indication of which one is "active"?
+- 🐛 **Level 3:** Type an obviously invalid email like "not-an-email" and tab away. Any warning at all?
 
 ### Security Rule:
 The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal user IDs to the frontend. These must be stripped server-side before sending the response.`);
@@ -110,6 +114,40 @@ return safeUser; // only id, name, email`,
 <button onClick={() => setActiveTab('orders')}>Orders</button>
 {activeTab === 'orders' && <OrdersPanel />}`,
         explanation: 'The sidebar tab buttons have no click handlers. The content panel always shows Personal Information regardless of which tab is clicked.',
+      },
+      {
+        bugId: 'USER-04', title: 'Form labels are not associated with their inputs',
+        location: 'UserProfile.tsx — Personal Info form', technique: 'Accessibility',
+        buggyCode: `<label className="input-label">Full Name</label>
+<input type="text" className="input-field" defaultValue="Jane Doe" />`,
+        fixedCode: `<label className="input-label" htmlFor="fullName">Full Name</label>
+<input id="fullName" type="text" className="input-field" defaultValue="Jane Doe" />`,
+        explanation: 'Without a matching htmlFor/id pair, clicking the label doesn\'t focus the field and screen readers can\'t announce which label belongs to which input.',
+      },
+      {
+        bugId: 'USER-05', title: 'Name/Email inputs are uncontrolled — changes never reach state',
+        location: 'UserProfile.tsx — Personal Info form', technique: 'State Management',
+        buggyCode: `<input type="text" className="input-field" defaultValue="Jane Doe" />
+// no value / onChange — React never sees what the user types`,
+        fixedCode: `const [name, setName] = useState('Jane Doe');
+<input type="text" value={name} onChange={e => setName(e.target.value)} />`,
+        explanation: 'The inputs use defaultValue with no value/onChange pair, so whatever the user types is invisible to component state — Save could never persist it even if it were wired up.',
+      },
+      {
+        bugId: 'USER-06', title: 'Sidebar tabs have no aria-current/aria-selected state',
+        location: 'UserProfile.tsx — sidebar buttons', technique: 'Accessibility',
+        buggyCode: `<button style={{ background: 'rgba(255,255,255,0.05)' }}>Personal Info</button>
+<button style={{ background: 'transparent' }}>Orders</button>`,
+        fixedCode: `<button aria-current={activeTab === 'personal' ? 'page' : undefined}>Personal Info</button>`,
+        explanation: 'The "active" tab is only communicated via a subtle background color — there is no aria-current/aria-selected for assistive tech.',
+      },
+      {
+        bugId: 'USER-07', title: 'Email field has no format validation',
+        location: 'UserProfile.tsx — email input', technique: 'Equivalence Partitioning',
+        buggyCode: `<input type="email" className="input-field" defaultValue="jane@example.com" />
+// type="email" alone provides no validation without a wrapping <form> and required`,
+        fixedCode: `<input type="email" required pattern="[^@]+@[^@]+\\.[^@]+" ... />`,
+        explanation: 'Typing an obviously invalid value like "not-an-email" produces no browser or app-level validation feedback whatsoever.',
       },
     ]);
   }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);

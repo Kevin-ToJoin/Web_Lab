@@ -84,7 +84,7 @@ export const database = {
     {
       id: 'PROD-006',
       name: 'Wireless Mouse',
-      category: 'Electronics', // Level 4 Bug: this might accidentally be tagged Home Goods in the API logic later
+      category: 'Electronics',
       price: 25.00,
       stock: 45,
       description: 'Ergonomic wireless mouse.',
