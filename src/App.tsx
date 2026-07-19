@@ -5,7 +5,7 @@ import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, U
 import './index.css';
 // Each app is code-split into its own lazy chunk to keep the initial bundle small.
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
-const EcommerceApp = lazy(() => import('./apps/EcommerceApp').then(m => ({ default: m.EcommerceApp })));
+const EcommerceApp = lazy(() => import('./apps/ecommerce').then(m => ({ default: m.EcommerceApp })));
 const BankApp = lazy(() => import('./apps/BankApp').then(m => ({ default: m.BankApp })));
 const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
@@ -303,7 +303,7 @@ function App() {
               <CatalogAppV02 />
             </ErrorBoundary>
           } />
-          <Route path="/ecommerce" element={
+          <Route path="/ecommerce/*" element={
             <ErrorBoundary appName="E-commerce Store">
               <EcommerceApp />
             </ErrorBoundary>
