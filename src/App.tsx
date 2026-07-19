@@ -9,7 +9,7 @@ const EcommerceApp = lazy(() => import('./apps/ecommerce').then(m => ({ default:
 const BankApp = lazy(() => import('./apps/BankApp').then(m => ({ default: m.BankApp })));
 const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
-const RegistrationApp = lazy(() => import('./apps/RegistrationApp').then(m => ({ default: m.RegistrationApp })));
+const RegistrationApp = lazy(() => import('./apps/registration').then(m => ({ default: m.RegistrationApp })));
 const HotelApp = lazy(() => import('./apps/HotelApp').then(m => ({ default: m.HotelApp })));
 const DeliveryApp = lazy(() => import('./apps/DeliveryApp').then(m => ({ default: m.DeliveryApp })));
 const ExamApp = lazy(() => import('./apps/ExamApp').then(m => ({ default: m.ExamApp })));
