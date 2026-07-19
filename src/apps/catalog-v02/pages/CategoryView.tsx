@@ -21,10 +21,19 @@ export const CategoryView = () => {
 - Each product card must show the correct name, price, and image.
 - Product names must contain no typos.
 - If a category has no products, show a friendly "No products found" message.
+- Category matching must be case-insensitive.
+- The number of results found must be visible to the user.
 
-### Bug Hints (2 bugs in this area):
+### Bug Hints (9 bugs in this area):
 - 🐛 **Level 4 (Equivalence):** Navigate to **Home Goods**. Do all displayed products actually belong to that category? Use the DB Viewer to cross-check — \`Products_Table\` shows the ground truth.
 - 🐛 **Level 10 (Race Condition):** Navigate to **Electronics**, then quickly click **Home Goods** before the list loads. Which category's results appear? Try it multiple times.
+- 🐛 **Level 3:** Manually edit the URL to \`/catalog/category/electronics\` (lowercase). Does it still find the products?
+- 🐛 **Level 3:** Manually edit the URL to an invalid category like \`/catalog/category/Nonsense\`. Is there any indication the category itself doesn't exist?
+- 🐛 **Level 3 (Accessibility):** Turn on a screen reader (or check the DOM) while the page is loading. Is the loading state announced?
+- 🐛 **Level 2:** On a category card, click the product image instead of the title. Does anything happen?
+- 🐛 **Level 1:** Is there any breadcrumb showing you came from Home?
+- 🐛 **Level 2 (Content):** Visit a category via a lowercase URL — does the heading look properly capitalized?
+- 🐛 **Level 2:** Is the number of matching products shown anywhere on this page?
 
 ### DB Cross-check:
 The \`Products_Table\` below shows the **correct** expected dataset for category \`"${catName}"\`. Compare it against what the UI actually renders.`);
@@ -76,6 +85,64 @@ await delay(latency);`,
         fixedCode:  `const latency = 300;
 await delay(latency);`,
         explanation: 'Electronics responses take 1500ms while all others take 300ms. Rapidly switching categories causes a slower Electronics response to overwrite a faster Home Goods response — classic race condition.',
+      },
+      {
+        bugId: 'CATV-01', title: 'Category name in the URL is case-sensitive',
+        location: 'CategoryView.tsx / MockAPI.ts — category filter', technique: 'Input Validation',
+        buggyCode: `results = results.filter(p => p.category === category); // exact match only`,
+        fixedCode: `results = results.filter(p => p.category.toLowerCase() === category.toLowerCase());`,
+        explanation: 'Visiting /catalog/category/electronics (lowercase) finds nothing, even though "Electronics" is a valid category — the filter requires an exact case match.',
+      },
+      {
+        bugId: 'CATV-02', title: 'Invalid category shows the same message as a valid-but-empty one',
+        location: 'CategoryView.tsx — empty state', technique: 'Error Handling',
+        buggyCode: `{products.length === 0 && <p>No products found in this category.</p>}
+// same message whether "Home Goods" has 0 results or the category doesn't exist at all`,
+        fixedCode: `const VALID = ['Electronics', 'Home Goods', 'Apparel', 'Accessories'];
+{!VALID.includes(catName) && <p>"{catName}" is not a valid category.</p>}`,
+        explanation: 'A typo\'d category in the URL is indistinguishable from a real, empty category — both just say "No products found."',
+      },
+      {
+        bugId: 'CATV-03', title: 'Loading state has no aria-live/aria-busy announcement',
+        location: 'CategoryView.tsx — loading state', technique: 'Accessibility',
+        buggyCode: `{loading ? <p>Loading products...</p> : ...}`,
+        fixedCode: `<p aria-live="polite" aria-busy={loading}>{loading ? 'Loading products...' : ...}</p>`,
+        explanation: 'Screen-reader users get no announcement that content is loading or has finished — the text change is silent.',
+      },
+      {
+        bugId: 'CATV-04', title: 'Only the product title is clickable on category cards',
+        location: 'CategoryView.tsx — product grid', technique: 'Missing Functionality',
+        buggyCode: `<img src={p.images[0]} alt={p.name} ... />
+<h4 onClick={() => navigate(...)}>{p.name}</h4>
+<div>\${p.price.toFixed(2)}</div>`,
+        fixedCode: `<div className="glass-panel" onClick={() => navigate(...)}>
+  {/* image, title and price all inside the clickable wrapper */}
+</div>`,
+        explanation: 'Clicking the product image or price does nothing — only the small title text is an active navigation target.',
+      },
+      {
+        bugId: 'CATV-05', title: 'No breadcrumb navigation showing Home > Category',
+        location: 'CategoryView.tsx — page header', technique: 'Missing Functionality',
+        buggyCode: `<h1>Category: {catName}</h1>
+{/* no breadcrumb trail */}`,
+        fixedCode: `<nav aria-label="Breadcrumb"><Link to="/catalog">Home</Link> / {catName}</nav>
+<h1>Category: {catName}</h1>`,
+        explanation: 'Nothing on the page indicates the site hierarchy, hurting wayfinding for users who land here directly.',
+      },
+      {
+        bugId: 'CATV-06', title: 'Category heading shows the raw URL param instead of proper casing',
+        location: 'CategoryView.tsx — page header', technique: 'Content Bug',
+        buggyCode: `<h1>Category: {catName}</h1> // renders "Category: electronics" verbatim from the URL`,
+        fixedCode: `<h1>Category: {properCase(catName)}</h1> // renders "Category: Electronics"`,
+        explanation: 'The heading interpolates the raw route param with no normalization, so a lowercase URL produces a lowercase heading.',
+      },
+      {
+        bugId: 'CATV-07', title: 'Result count is never shown',
+        location: 'CategoryView.tsx — product grid header', technique: 'Missing Functionality',
+        buggyCode: `<h1>Category: {catName}</h1>
+{/* no count of products.length shown anywhere */}`,
+        fixedCode: `<p>{products.length} product{products.length !== 1 ? 's' : ''} found</p>`,
+        explanation: 'The DB viewer computes per-category counts, but the page itself never tells the user how many results they\'re looking at.',
       },
     ]);
 

@@ -21,8 +21,12 @@ export const CartPage = () => {
 - Promo code \`SAVE20\` applies 20% off. Any code not in the approved list must be rejected.
 - The displayed Total must be mathematically exact: \`(Subtotal × 1.08) - Discount\`.
 - Checkout must fail gracefully if floating-point precision causes the total to drift.
+- A product's price must never change silently after it's first added to the cart.
+- Invalid promo codes must show a clear error, not fail silently.
+- Removing the last item in the cart must succeed like any other removal.
+- An emptied cart must not leave a stale discount applied to the next session.
 
-### Bug Hints (7 bugs in this area):
+### Bug Hints (17 bugs in this area):
 - 🐛 **Level 3 (Boundary):** Click the **−** button when quantity is 1. Can the quantity go to 0 or negative? What happens to the cart total?
 - 🐛 **Level 5 (Stale State):** Add a product, then **remove** it. Does the "Total Items" counter update correctly?
 - 🐛 **Level 7 (Data Integrity):** Add **PROD-001** (Ultra HD 4K Smart TV) to the cart, then add another product, then try to remove PROD-001. Which item actually disappears?
@@ -30,6 +34,16 @@ export const CartPage = () => {
 - 🐛 **Level 8 (Logic):** Apply a promo code and check the order summary. Is the 8% tax applied on the **discounted** amount or the **full** subtotal? Check the DB for the expected formula.
 - 🐛 **Level 9 (Security):** Open your browser console and run \`localStorage.setItem('isAdmin', 'true')\`, then refresh the cart. What happens to the total?
 - 🐛 **Level 10 (Float):** Add items whose prices have cents (e.g., $249.50). After tax calculations, try clicking Checkout. Does the payment validation pass every time?
+- 🐛 **Level 6 (Stale Cache):** Add a product, then imagine its price changed server-side. Does the cart ever pick up the new price?
+- 🐛 **Level 6 (Resource):** Watch \`localStorage\` in DevTools while adding items — is the whole cart being re-written on every keystroke/click?
+- 🐛 **Level 8 (Race Condition):** Click "Add to Cart" on the same product **twice very fast**. Does the quantity end up at 2?
+- 🐛 **Level 4 (Logic):** Reduce your cart to exactly one item, then try to remove it. What happens?
+- 🐛 **Level 6 (Mutation):** Rapidly change a quantity with the +/− buttons — does the UI ever seem to "miss" an update?
+- 🐛 **Level 3 (Case):** Try the promo code \`fall10\` in lowercase. Does it work the same as \`FALL10\`?
+- 🐛 **Level 4 (Boundary):** Apply a fake \`FLAT50\` code to a cart with a small subtotal. Can the total go negative?
+- 🐛 **Level 3 (Boundary):** Type \` SAVE20 \` with a leading/trailing space. Does it still apply?
+- 🐛 **Level 2 (Missing Functionality):** Type a clearly invalid promo code and apply it. Do you see any error message at all?
+- 🐛 **Level 5 (Stale State):** Apply a promo, empty the cart completely, then add a new item. Is the old discount still applied?
 
 ### Expected Formula:
 \`\`\`
@@ -150,6 +164,111 @@ if (VALID[code]) applyDiscount(VALID[code]);`,
         buggyCode: `if ((total * 100) % 1 !== 0)`,
         fixedCode: `if (Math.abs((total * 100) % 1) > Number.EPSILON)`,
         explanation: 'IEEE 754 floating-point arithmetic produces values like 120.0000000001. Strict % 1 === 0 fails; use Number.EPSILON tolerance.',
+      },
+      {
+        bugId: 'CART-08', title: 'Product price is cached on first add and never refreshed',
+        location: 'CartContext.tsx — productCache', technique: 'Stale Cache',
+        buggyCode: `const productCache = new Map<string, Product>();
+// ...
+if (!productCache.has(product.id)) productCache.set(product.id, product);
+const cachedProduct = productCache.get(product.id)!;`,
+        fixedCode: `// Always use the freshly-passed product, or invalidate the cache
+// whenever the underlying product data changes.
+const addToCart = (product: Product, qty: number) => { /* use product directly */ };`,
+        explanation: 'A module-level Map caches the product on first add and is never invalidated, so later price changes never reach the cart.',
+      },
+      {
+        bugId: 'CART-09', title: 'Entire cart state is re-written to localStorage on every change',
+        location: 'CartContext.tsx — cart_backup effect', technique: 'Resource Management',
+        buggyCode: `useEffect(() => {
+  try {
+    localStorage.setItem('cart_backup', JSON.stringify({ items, totalItems, promo, timestamp: Date.now() }));
+  } catch { /* silently swallows QuotaExceededError */ }
+}, [items, totalItems, promo]);`,
+        fixedCode: `// Debounce the write, and surface (don't swallow) quota errors:
+useEffect(() => {
+  const id = setTimeout(() => { try { localStorage.setItem(...); } catch (e) { reportError(e); } }, 500);
+  return () => clearTimeout(id);
+}, [items, totalItems, promo]);`,
+        explanation: 'A full snapshot is written on every single state change with no debounce, and any QuotaExceededError is caught and discarded silently.',
+      },
+      {
+        bugId: 'CART-10', title: 'Rapid double-add reads a stale closure and drops one add',
+        location: 'CartContext.tsx — addToCart', technique: 'Race Condition',
+        buggyCode: `await new Promise(r => setTimeout(r, 200));
+const existing = items.find(i => i.id === cachedProduct.id); // stale \`items\` closure`,
+        fixedCode: `setItems(prev => {
+  const existing = prev.find(i => i.id === cachedProduct.id); // read from prev, not closure
+  return existing ? prev.map(...) : [...prev, ...];
+});`,
+        explanation: 'addToCart awaits an artificial delay, then checks for an existing item using the `items` value captured at call time. Two rapid clicks both see the array before either update landed.',
+      },
+      {
+        bugId: 'CART-11', title: 'Cannot remove the last item in the cart',
+        location: 'CartContext.tsx — removeFromCart', technique: 'Logic Error',
+        buggyCode: `if (items.length <= 1 && id !== 'PROD-001') {
+  return; // silently refuses to remove the last item
+}`,
+        fixedCode: `// Remove this guard entirely — removing the last item should always work.`,
+        explanation: 'A leftover guard blocks removal whenever exactly one item remains, so the cart can never be fully emptied via the Remove button.',
+      },
+      {
+        bugId: 'CART-12', title: 'Quantity update mutates the array in place',
+        location: 'CartContext.tsx — updateQuantity', technique: 'State Mutation',
+        buggyCode: `setItems(prev => {
+  const idx = prev.indexOf(prev.find(i => i.id === id)!);
+  prev[idx] = { ...prev[idx], quantity: qty };
+  return prev; // same array reference — React may skip the re-render
+});`,
+        fixedCode: `setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: qty } : i));`,
+        explanation: 'Mutating and returning the same array reference means React\'s shallow comparison can decide nothing changed, silently dropping updates.',
+      },
+      {
+        bugId: 'CART-13', title: 'Promo code FALL10 is case-sensitive',
+        location: 'CartContext.tsx — applyPromo', technique: 'Equivalence Partitioning',
+        buggyCode: `} else if (code === 'FALL10') {
+  setPromo('10OFF');`,
+        fixedCode: `} else if (code.trim().toUpperCase() === 'FALL10') {
+  setPromo('10OFF');`,
+        explanation: 'Unlike the SAVE20 regex path, FALL10 requires an exact-case match, so "fall10" or "Fall10" is silently rejected.',
+      },
+      {
+        bugId: 'CART-14', title: 'FLAT50 promo can push the total negative',
+        location: 'CartContext.tsx — applyPromo / discount', technique: 'Boundary Value',
+        buggyCode: `} else if (code === 'FLAT50') {
+  setPromo('50FLAT'); // later: discount = 50, no floor clamp`,
+        fixedCode: `const total = Math.max(0, subtotal + tax - discount);`,
+        explanation: 'A flat $50 discount has no lower-bound clamp — on a subtotal under $50 the final total goes negative.',
+      },
+      {
+        bugId: 'CART-15', title: 'Promo code with whitespace is rejected',
+        location: 'CartContext.tsx — applyPromo', technique: 'Boundary Value',
+        buggyCode: `if (code.match(/.*20$/)) { setPromo('20OFF'); }
+// " SAVE20 " does not match /.*20$/ due to the trailing space`,
+        fixedCode: `const trimmed = code.trim();
+if (trimmed.match(/.*20$/)) { setPromo('20OFF'); }`,
+        explanation: 'Neither promo path trims the input, so accidental leading/trailing whitespace silently defeats an otherwise-valid code.',
+      },
+      {
+        bugId: 'CART-16', title: 'Invalid promo codes fail silently',
+        location: 'CartContext.tsx — applyPromo', technique: 'Missing Functionality',
+        buggyCode: `const applyPromo = (code: string) => {
+  if (code.match(/.*20$/)) { ... }
+  else if (code === 'FALL10') { ... }
+  else if (code === 'FLAT50') { ... }
+  // no else branch — invalid codes do nothing, no feedback
+};`,
+        fixedCode: `else { setPromoError('That code is not valid.'); }`,
+        explanation: 'There is no fallback branch for an unrecognized code, so the user gets zero feedback that their entry was rejected.',
+      },
+      {
+        bugId: 'CART-17', title: 'Discount stays applied after the cart empties out',
+        location: 'CartContext.tsx — items/promo state', technique: 'Stale State',
+        buggyCode: `// promo state is never reset when items.length reaches 0`,
+        fixedCode: `useEffect(() => {
+  if (items.length === 0) setPromo('');
+}, [items]);`,
+        explanation: 'Emptying the cart doesn\'t clear the applied promo code, so the next item added inherits a discount the user never re-entered.',
       },
     ]);
   }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints, setSolutions]);

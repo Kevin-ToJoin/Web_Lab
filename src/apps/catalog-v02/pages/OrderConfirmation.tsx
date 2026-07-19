@@ -15,10 +15,14 @@ export const OrderConfirmation = () => {
 - A "Return to Catalog" button must navigate back to the home page.
 - The displayed order total must match the actual cart total at time of checkout.
 
-### Bug Hints (3 bugs on this page):
+### Bug Hints (7 bugs on this page):
 - 🐛 **Level 5 (Stale State):** After reaching this page, press the browser Back button and go to your cart. Is the cart empty?
 - 🐛 **Level 7 (Data Integrity):** Look at the \`Orders_Table\` below. Is the \`total\` field correct? Did the order save the actual purchase amount?
-- 🐛 **Level 7 (Data Integrity):** The Order ID shown is \`ORD-9999\`. Place another order — is a new unique ID generated, or is it always the same?`);
+- 🐛 **Level 7 (Data Integrity):** The Order ID shown is \`ORD-9999\`. Place another order — is a new unique ID generated, or is it always the same?
+- 🐛 **Level 3 (Accessibility):** Reach this page with a screen reader active — is the success message announced?
+- 🐛 **Level 2:** Does this page tell you which items you actually bought, or where they're shipping to?
+- 🐛 **Level 1:** Is there any estimated delivery date or "what happens next" information?
+- 🐛 **Level 6:** After reaching this page, refresh it (F5). Is there anything telling you the order was already placed?`);
 
     setDbTables({
       'Orders_Table': [
@@ -85,6 +89,42 @@ useEffect(() => { clearCart(); }, []);`,
         fixedCode: `// Pass total via router state: navigate('/catalog/checkout/success', { state: { total } })
 // Then read: const { total } = useLocation().state`,
         explanation: 'The order record stores total: 0 because the cart total is never passed to the confirmation page.',
+      },
+      {
+        bugId: 'ORD-04', title: 'Success state has no aria-live announcement or focus shift',
+        location: 'OrderConfirmation.tsx — success message', technique: 'Accessibility',
+        buggyCode: `<h1>Order Confirmed!</h1>
+{/* no aria-live region, no focus() call on mount */}`,
+        fixedCode: `<h1 tabIndex={-1} ref={headingRef} aria-live="polite">Order Confirmed!</h1>
+useEffect(() => { headingRef.current?.focus(); }, []);`,
+        explanation: 'A screen-reader user landing here gets no announcement that the purchase succeeded — the page is silent.',
+      },
+      {
+        bugId: 'ORD-05', title: 'No order summary (items, address) is shown',
+        location: 'OrderConfirmation.tsx — page body', technique: 'Missing Functionality',
+        buggyCode: `<h1>Order Confirmed!</h1>
+<p>Your simulated order ID is: ORD-9999</p>
+{/* no line items, no shipping address, no payment summary */}`,
+        fixedCode: `<OrderSummary items={cartItemsAtCheckout} address={shippingAddress} total={total} />`,
+        explanation: 'A customer has no way to verify what they actually bought or where it\'s being shipped — only a generic checkmark and an ID.',
+      },
+      {
+        bugId: 'ORD-06', title: 'No estimated delivery date or next-steps info',
+        location: 'OrderConfirmation.tsx — page body', technique: 'Content Bug',
+        buggyCode: `<p>Your simulated order ID is: ORD-9999</p>
+<button onClick={() => navigate('/catalog')}>Return to Catalog</button>
+{/* nothing about when the order will arrive */}`,
+        fixedCode: `<p>Estimated delivery: 3–5 business days. A confirmation email has been sent.</p>`,
+        explanation: 'The confirmation ends abruptly with no indication of what the customer should expect next.',
+      },
+      {
+        bugId: 'ORD-07', title: 'Refreshing gives no indication the order was already placed',
+        location: 'OrderConfirmation.tsx — page mount behavior', technique: 'Idempotency',
+        buggyCode: `// The page re-renders identically on every reload with the same
+// hardcoded ORD-9999, no "already placed" state, no idempotency key.`,
+        fixedCode: `// Persist a placed-order flag/id and short-circuit any resubmission
+// logic on remount, warning the user instead of silently repeating it.`,
+        explanation: 'In a real system, actions tied to this page firing again on refresh could double-submit the order — there is no safeguard or messaging around that risk.',
       },
     ]);
   }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
