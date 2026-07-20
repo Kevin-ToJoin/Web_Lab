@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQAPanel, type BugSolution } from './QAContext';
+import { IstqbTags } from './IstqbTags';
 import { BookOpen, Database, TerminalSquare, Send, Lightbulb, Lock } from 'lucide-react';
 
 // ─── Minimal Markdown Renderer ────────────────────────────────────────────────
@@ -81,7 +82,8 @@ const SolutionCard = ({ sol }: { sol: BugSolution }) => (
       <span style={{ fontSize: '0.7rem', color: 'var(--text-disabled)', fontStyle: 'italic' }}>{sol.technique}</span>
     </div>
     <h4 style={{ fontSize: '0.9rem', marginBottom: '0.25rem' }}>{sol.title}</h4>
-    <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', marginBottom: '0.75rem' }}>📁 {sol.location}</p>
+    <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', marginBottom: '0.6rem' }}>📁 {sol.location}</p>
+    <IstqbTags bugId={sol.bugId} />
     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.6 }}>{sol.explanation}</p>
     <div style={{ borderLeft: '3px solid var(--danger)', background: 'rgba(239,68,68,0.07)', borderRadius: '0 4px 4px 0', padding: '0.6rem 0.75rem', marginBottom: '0.5rem' }}>
       <p style={{ fontSize: '0.68rem', color: 'var(--danger)', fontWeight: 700, marginBottom: '0.25rem', letterSpacing: '0.05em' }}>BUGGY</p>

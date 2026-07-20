@@ -50,34 +50,16 @@ export const ProductDetail = () => {
     setRequirements(`## Product Detail
 ### Acceptance Criteria:
 - Display product image, name, category, and price.
-- Must be able to select quantity and add to cart.
-- The "Back to Catalog" button must return the user to the catalog home page.
-- Wishlist status must persist across a page reload.
-- Review textarea must enforce a maximum of 50 characters.
 - Must display customer reviews for the **current** product only.
-- Out-of-stock products must not be addable to the cart.
 - All interactive controls must be reachable and labeled for keyboard/screen-reader users.
+- The layout must hold up on a narrow mobile viewport.
 
-### Bug Hints (19 bugs on this page):
-- 🐛 **Level 2:** Try clicking "Back to Catalog" — where does it actually go?
-- 🐛 **Level 3:** Add the product to your Wishlist, then refresh the page. Is it still wishlisted?
-- 🐛 **Level 3:** The review form says max 50 chars. Can you submit more than that?
-- 🐛 **Level 7:** Look at the DB viewer. Do the reviews shown match this product's ID?
-- 🐛 **Level 9 (Security):** Submit a review with \`<b>bold</b>\` or \`<img src=x onerror=alert(1)>\` in the comment. What renders?
-- 🐛 **Level 4 (Hover):** Hover the price info icon, then scroll the page while it's open. Does the tooltip move with the content?
-- 🐛 **Level 7 (Keyboard):** Open Quick View on a related product, then press Tab repeatedly. Can you escape the modal? Does focus return to the button after closing?
-- 🐛 **Level 6:** Submit a review with 0 stars selected. What happens to the "Submitting..." spinner?
-- 🐛 **Level 2 (Content):** Do the review/product dates look machine-formatted rather than human-readable?
-- 🐛 **Level 4 (React):** Open DevTools console — do you see a "duplicate key" warning in Related Products?
-- 🐛 **Level 2 (Accessibility):** Inspect the product images — do they have meaningful alt text?
-- 🐛 **Level 3 (Contrast):** Find a product with 0 stock. Is the "Out of Stock" badge easy to read?
-- 🐛 **Level 3 (Responsive):** Resize the window to a narrow mobile width — does the product title overflow?
-- 🐛 **Level 2 (Accessibility):** The cart button next to the quantity field has only an icon — does it have any accessible label?
-- 🐛 **Level 5:** Find an out-of-stock product and try adding it to your cart anyway. Does it work?
-- 🐛 **Level 3:** Look closely at the "Out of Stock" button below an unavailable item — is it actually disabled?
-- 🐛 **Level 2 (CSS):** Hover the "Add to Wishlist" button — does it visually respond?
-- 🐛 **Level 4 (Z-Index):** Open Quick View — does the modal ever render behind the QA Inspector panel?
-- 🐛 **Level 4 (Boundary):** Clear the quantity field entirely, then click Add to Cart. What quantity gets added?`);
+### Bug Hints (5 bugs on this page):
+- 🐛 **Accessibility (Level 2):** Inspect the product images — do they have meaningful alt text?
+- 🐛 **Accessibility (Level 3, Contrast):** Find a product with 0 stock. Is the "Out of Stock" badge easy to read?
+- 🐛 **Accessibility (Level 7, Keyboard):** Open Quick View on a related product, then press Tab repeatedly. Can you escape the modal? Does focus return to the button after closing?
+- 🐛 **Compatibility (Level 3):** Resize the window to a narrow mobile width — does the product title overflow?
+- 🐛 **Compatibility (Level 4):** Hover the price info icon, then scroll the page while it's open. Does the tooltip move with the content?`);
 
     const p = database.products.find(x => x.id === id);
     setDbTables({
@@ -104,29 +86,6 @@ export const ProductDetail = () => {
 
     setSolutions([
       {
-        bugId: 'CAT-03', title: 'Back button navigates to invalid URL',
-        location: 'ProductDetail.tsx ~line 69', technique: 'Broken Link',
-        buggyCode: `onClick={() => navigate('/catalog/invalid-url')}`,
-        fixedCode:  `onClick={() => navigate('/catalog')}`,
-        explanation: 'The onClick handler has a hardcoded typo. It navigates to a non-existent route instead of the catalog home.',
-      },
-      {
-        bugId: 'CAT-04', title: 'Wishlist heart resets on refresh (not persisted)',
-        location: 'ProductDetail.tsx — wishlisted state', technique: 'Stale State',
-        buggyCode: `const [wishlisted, setWishlisted] = useState(false);
-// never read from or written to localStorage`,
-        fixedCode: `const [wishlisted, setWishlisted] = useState(() => localStorage.getItem(\`wish_\${id}\`) === '1');
-useEffect(() => { localStorage.setItem(\`wish_\${id}\`, wishlisted ? '1' : '0'); }, [wishlisted, id]);`,
-        explanation: 'Wishlist status only lives in local component state. Reloading the page silently un-wishlists every product.',
-      },
-      {
-        bugId: 'PDP-01', title: 'Product review comments render raw HTML (XSS)',
-        location: 'ProductDetail.tsx — local review list', technique: 'Security (XSS)',
-        buggyCode: `<p dangerouslySetInnerHTML={{ __html: rev.comment }} />`,
-        fixedCode: `<p>{rev.comment}</p>`,
-        explanation: 'User-submitted review text is injected as raw HTML. A comment like <img src=x onerror=alert(1)> executes arbitrary script — a stored XSS vector.',
-      },
-      {
         bugId: 'PDP-02', title: 'Price tooltip stays in place while scrolling',
         location: 'ProductDetail.tsx — price info tooltip', technique: 'CSS Bug',
         buggyCode: `style={{ position: 'fixed', ... }}`,
@@ -146,44 +105,6 @@ useEffect(() => { localStorage.setItem(\`wish_\${id}\`, wishlisted ? '1' : '0');
   return;
 }`,
         explanation: 'Closing the modal (via Escape or the X button) never restores focus to whatever opened it, disorienting keyboard and screen-reader users.',
-      },
-      {
-        bugId: 'PDP-04', title: 'Submitting a review with 0 stars hangs the spinner forever',
-        location: 'ProductDetail.tsx — handleAddReview', technique: 'Async / Infinite Loop',
-        buggyCode: `if (selectedRating === 0) {
-  setSubmitting(true);
-  return; // setSubmitting(false) is never called
-}`,
-        fixedCode: `if (selectedRating === 0) {
-  setError('Please select a rating.');
-  return;
-}`,
-        explanation: 'The 0-star guard flips the loading spinner on but has no matching setSubmitting(false), so the button is stuck showing "Submitting..." indefinitely.',
-      },
-      {
-        bugId: 'PDP-05', title: 'Review textarea has no maxLength, 50-char limit not enforced',
-        location: 'ProductDetail.tsx — review textarea', technique: 'Boundary Value',
-        buggyCode: `<textarea className="input-field" rows={3} value={reviewText} onChange={...} />
-// BUG: Missing maxLength prop!`,
-        fixedCode: `<textarea maxLength={50} className="input-field" rows={3} value={reviewText} onChange={...} />`,
-        explanation: 'The UI advertises a 50-character limit but neither the textarea nor handleAddReview actually enforces it — reviews of any length are accepted.',
-      },
-      {
-        bugId: 'PDP-06', title: 'Review dates render as raw ISO strings',
-        location: 'ProductDetail.tsx — review date display', technique: 'Content Bug',
-        buggyCode: `date: new Date().toISOString().split('T')[0]
-// rendered as-is: "2026-07-18"`,
-        fixedCode: `{new Date(rev.date).toLocaleDateString()}`,
-        explanation: 'Dates are stored and displayed as raw ISO strings instead of being formatted for the viewer\'s locale.',
-      },
-      {
-        bugId: 'PDP-07', title: 'Related Products uses category as the React key',
-        location: 'ProductDetail.tsx — relatedProducts.map', technique: 'React Key Bug',
-        buggyCode: `{relatedProducts.map((rp) => (
-  <div key={rp.category} ...>`,
-        fixedCode: `{relatedProducts.map((rp) => (
-  <div key={rp.id} ...>`,
-        explanation: 'Multiple related products can share the same category, producing duplicate React keys — a classic source of misapplied DOM updates.',
       },
       {
         bugId: 'PDP-08', title: 'Product images have empty or missing alt attributes',
@@ -207,69 +128,6 @@ useEffect(() => { localStorage.setItem(\`wish_\${id}\`, wishlisted ? '1' : '0');
         buggyCode: `<h1 style={{ fontSize: '2.5rem', width: '400px' }}>{product.name}</h1>`,
         fixedCode: `<h1 style={{ fontSize: '2.5rem', maxWidth: '100%' }}>{product.name}</h1>`,
         explanation: 'A hardcoded 400px width forces horizontal overflow on any viewport narrower than that, e.g. an iPhone SE at 375px.',
-      },
-      {
-        bugId: 'PDP-11', title: 'Icon-only "Add to Cart" button has no accessible label',
-        location: 'ProductDetail.tsx — add-to-cart button', technique: 'Accessibility',
-        buggyCode: `<button onClick={() => addToCart(product, qty)}>
-  <ShoppingCart size={20} />
-</button>`,
-        fixedCode: `<button aria-label="Add to cart" onClick={() => addToCart(product, qty)}>
-  <ShoppingCart size={20} aria-hidden="true" />
-</button>`,
-        explanation: 'The button has no visible text and no aria-label, so screen readers announce it as an unlabeled button.',
-      },
-      {
-        bugId: 'PDP-12', title: 'Out-of-stock products can still be added to the cart',
-        location: 'ProductDetail.tsx — add-to-cart button', technique: 'Missing Validation',
-        buggyCode: `<button onClick={() => addToCart(product, qty)}>
-  <ShoppingCart size={20} />
-</button>
-// no product.stock === 0 check anywhere`,
-        fixedCode: `<button disabled={product.stock === 0} onClick={() => addToCart(product, qty)}>`,
-        explanation: 'Neither the main Add to Cart button nor the quantity input checks stock, so an item with stock: 0 can still be purchased.',
-      },
-      {
-        bugId: 'PDP-13', title: '"Out of Stock" button looks disabled but is fully clickable',
-        location: 'ProductDetail.tsx — out-of-stock secondary button', technique: 'Broken UI',
-        buggyCode: `<button style={{ opacity: 0.5, cursor: 'not-allowed' }} onClick={() => addToCart(product, 1)}>
-  Out of Stock
-</button>`,
-        fixedCode: `<button disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>Out of Stock</button>`,
-        explanation: 'Only visual styling suggests the button is disabled — there is no `disabled` attribute, so clicking it still adds the item to the cart.',
-      },
-      {
-        bugId: 'PDP-14', title: 'Wishlist button hover state is dead',
-        location: 'ProductDetail.tsx — wishlist button', technique: 'CSS Bug',
-        buggyCode: `<button className="btn btn-secondary" style={{ background: 'transparent', color: 'var(--text-muted)' }}>`,
-        fixedCode: `<button className="btn btn-secondary"> {/* let the CSS class's :hover rule apply */}`,
-        explanation: 'Inline styles have higher specificity than the stylesheet\'s :hover rule, permanently overriding it so the button never visually responds to hover.',
-      },
-      {
-        bugId: 'PDP-15', title: 'Quick View modal shares z-index with the QA Inspector sidebar',
-        location: 'ProductDetail.tsx — modal overlay', technique: 'Z-Index Bug',
-        buggyCode: `style={{ position: 'fixed', ..., zIndex: 10 }} // CatalogV02Layout sidebar is also zIndex: 10`,
-        fixedCode: `style={{ position: 'fixed', ..., zIndex: 1000 }}`,
-        explanation: 'The modal overlay and the layout\'s QA Inspector sidebar both use zIndex: 10, so the sidebar can render on top of an open modal.',
-      },
-      {
-        bugId: 'PDP-16', title: 'Clearing the quantity field silently adds NaN to the cart',
-        location: 'ProductDetail.tsx — quantity input', technique: 'Boundary Value',
-        buggyCode: `<input type="number" value={qty} onChange={(e) => setQty(parseInt(e.target.value))} />
-// parseInt('') === NaN, no fallback`,
-        fixedCode: `onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}`,
-        explanation: 'Clearing the number input makes parseInt return NaN, which is passed straight through to addToCart with no guard.',
-      },
-      {
-        bugId: 'PDP-17', title: '"Related Products" aren\'t actually related',
-        location: 'ProductDetail.tsx — relatedProducts', technique: 'Content Quality',
-        buggyCode: `const relatedProducts = database.products
-  .filter(p => p.id !== product.id)
-  .slice(0, 4); // ignores category and tags entirely`,
-        fixedCode: `const relatedProducts = database.products
-  .filter(p => p.id !== product.id && p.category === product.category)
-  .slice(0, 4);`,
-        explanation: 'The "related" list is just the first 4 other products in DB order — it never considers category or tags, so it\'s frequently irrelevant.',
       },
     ]);
 

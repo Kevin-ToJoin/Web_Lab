@@ -23,19 +23,14 @@ export const SearchResults = () => {
 - Must show a count of found items.
 - If the server throws a 500 error, it should display a friendly fallback message, not a raw stack trace.
 - A search must never hang indefinitely with no way to cancel or time out.
-- Search must match against all relevant product fields, not just the name.
 - **Bug Hint:** Try searching for 'error' to see how the system handles it, or try injecting HTML tags.
 
-### Bug Hints (9 bugs in this area):
-- 🐛 **Level 3 (Boundary):** Clear the search box entirely and submit. Does it return everything?
-- 🐛 **Level 1 (Content):** Search for "stand" — look closely at the product name in the results.
-- 🐛 **Level 9 (Security):** Search for \`<b>bold</b>\` or a \`<script>\` tag. What renders?
-- 🐛 **Level 6:** Search for the literal word "error". What do you see?
-- 🐛 **Level 6:** Search for the literal word "infinite". How long do you wait?
-- 🐛 **Level 2:** Is the number of results shown anywhere on this page?
-- 🐛 **Level 3 (Accessibility):** After a search completes, does keyboard focus move anywhere useful?
-- 🐛 **Level 4 (Boundary):** Search for a single space character. What comes back?
-- 🐛 **Level 5:** Search for a word that only appears in a product's tags (not its name), like "gaming". Does it find anything?`);
+### Bug Hints (5 bugs in this area):
+- 🐛 **Input validation (Level 3):** Clear the search box entirely and submit. Does it return everything instead of nothing?
+- 🐛 **Usability (Level 1):** Search for "stand" — look closely at the product name in the results.
+- 🐛 **Security (Level 9):** Search for \`<b>bold</b>\` or a \`<script>\` tag. What renders?
+- 🐛 **Reliability (Level 6):** Search for the literal word "error". What do you see?
+- 🐛 **Reliability (Level 6):** Search for the literal word "infinite". How long do you wait?`);
 
     // 2. Inject DB Tables
     setDbTables({
@@ -102,44 +97,6 @@ setError(err.message); // shown verbatim to the user`,
         fixedCode: `// Use a real AbortController-based timeout so a slow request
 // fails gracefully instead of hanging the UI indefinitely.`,
         explanation: 'A near-10,000-second delay leaves the "Searching database..." state on screen indefinitely with no cancel button or timeout.',
-      },
-      {
-        bugId: 'SEARCH-05', title: 'Result count is never displayed',
-        location: 'SearchResults.tsx — results grid', technique: 'Missing Functionality',
-        buggyCode: `<h1>Search Results</h1>
-{/* no count of products.length anywhere */}`,
-        fixedCode: `<p>{products.length} result{products.length !== 1 ? 's' : ''} for "{query}"</p>`,
-        explanation: 'The acceptance criteria explicitly require a found-items count, but the page never renders one.',
-      },
-      {
-        bugId: 'SEARCH-06', title: 'Focus never moves to the results after a search',
-        location: 'SearchResults.tsx — results heading', technique: 'Accessibility',
-        buggyCode: `<h1 style={{ fontSize: '2rem' }}>Search Results</h1>
-{/* no ref, no focus() call after navigation */}`,
-        fixedCode: `const headingRef = useRef<HTMLHeadingElement>(null);
-useEffect(() => { headingRef.current?.focus(); }, [query]);
-<h1 ref={headingRef} tabIndex={-1}>Search Results</h1>`,
-        explanation: 'After a client-side navigation to a new search, keyboard/screen-reader focus stays wherever it was — there is no orientation cue that new content loaded.',
-      },
-      {
-        bugId: 'SEARCH-07', title: 'A single-space query matches almost every product',
-        location: 'MockAPI.ts — getProducts', technique: 'Boundary Value',
-        buggyCode: `if (search) { results = results.filter(p => p.name.toLowerCase().includes(search.toLowerCase())); }
-// " " is truthy, and nearly every multi-word product name contains a space`,
-        fixedCode: `const trimmed = search.trim();
-if (trimmed) { results = results.filter(p => p.name.toLowerCase().includes(trimmed.toLowerCase())); }`,
-        explanation: 'A whitespace-only query passes the truthy check (unlike an empty string) and then matches any product name containing a space — nearly all of them.',
-      },
-      {
-        bugId: 'SEARCH-08', title: 'Search only matches product names — tags are ignored',
-        location: 'MockAPI.ts — getProducts', technique: 'Missing Functionality',
-        buggyCode: `results = results.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
-// p.tags (e.g. ['gaming', 'wireless']) is never checked`,
-        fixedCode: `results = results.filter(p =>
-  p.name.toLowerCase().includes(search.toLowerCase()) ||
-  p.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))
-);`,
-        explanation: 'Every product has a tags array meant for discovery, but the search implementation never reads it — searching "gaming" misses the gaming monitor and keyboard.',
       },
     ]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
