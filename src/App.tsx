@@ -8,7 +8,7 @@ const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ defau
 const EcommerceApp = lazy(() => import('./apps/ecommerce').then(m => ({ default: m.EcommerceApp })));
 const BankApp = lazy(() => import('./apps/bank').then(m => ({ default: m.BankApp })));
 const HealthcareApp = lazy(() => import('./apps/healthcare').then(m => ({ default: m.HealthcareApp })));
-const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
+const TradingApp = lazy(() => import('./apps/trading').then(m => ({ default: m.TradingApp })));
 const RegistrationApp = lazy(() => import('./apps/registration').then(m => ({ default: m.RegistrationApp })));
 const HotelApp = lazy(() => import('./apps/HotelApp').then(m => ({ default: m.HotelApp })));
 const DeliveryApp = lazy(() => import('./apps/DeliveryApp').then(m => ({ default: m.DeliveryApp })));
@@ -321,7 +321,7 @@ function App() {
               <HealthcareApp />
             </ErrorBoundary>
           } />
-          <Route path="/trading" element={
+          <Route path="/trading/*" element={
             <ErrorBoundary appName="Trading Dashboard">
               <TradingApp />
             </ErrorBoundary>
