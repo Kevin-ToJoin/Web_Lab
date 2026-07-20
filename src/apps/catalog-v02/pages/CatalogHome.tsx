@@ -31,24 +31,11 @@ export const CatalogHome = () => {
 - Product names and descriptions must contain no typos or placeholder text.
 - Inactive promotions must NOT be displayed to users.
 
-### Bug Hints (14 bugs on this page):
-- 🐛 **Level 1:** Inspect the product cards carefully — do any descriptions look like placeholder text?
-- 🐛 **Level 1:** Try clicking the "Shop Now" button in the hero banner. What happens?
-- 🐛 **Level 1:** Trigger a search by typing something and pressing a key that isn't Enter. Does the search fire?
-- 🐛 **Level 3:** Watch the hero carousel — does it rotate at a comfortable reading pace?
-- 🐛 **Level 4:** Scroll the page — does the "scroll to top" button behave smoothly?
-- 🐛 **Level 6 (DevTools):** Open the Elements panel and watch \`<body>\` while the carousel rotates — do hidden nodes keep piling up?
-- 🐛 **Level 5 (Performance):** Scroll the page rapidly — is the "scroll to top" button doing more work than it needs to?
-- 🐛 **Level 2:** Reload the page and immediately look at the product count text before data finishes loading.
-- 🐛 **Level 4 (Network):** Inspect the hero banner's background image request — is it sized appropriately for the viewport?
-- 🐛 **Level 3 (Keyboard):** Try to reach the carousel dots or the "Shop by Category" cards using only the Tab key. Can you?
-- 🐛 **Level 2:** On a featured product card, click the image or the price instead of the title. Does anything happen?
-- 🐛 **Level 2 (Responsive):** Look at the first featured product's name — does it fit its card cleanly, even on a narrow screen?
-- 🐛 **Level 4 (Responsive):** Shrink your browser window to laptop width — does the QA Inspector panel start crushing the app content?
-- 🐛 **Level 1:** Is there any way to hide or collapse the QA Inspector panel to get more screen space?
-
-### DB Cross-check:
-Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\`. Is the "Up to 50% off" banner correct?`);
+### Bug Hints (4 bugs on this page):
+- 🐛 **Usability (Level 1):** Inspect the product cards carefully — do any descriptions look like placeholder text?
+- 🐛 **Functional correctness (Level 2):** Try clicking the "Shop Now" button in the hero banner. What happens?
+- 🐛 **Performance (Level 6):** Open DevTools' Elements panel and watch \`<body>\` while the carousel rotates — do hidden nodes keep piling up?
+- 🐛 **Performance (Level 5):** Scroll the page rapidly — is the "scroll to top" button doing more work than it needs to on every scroll event?`);
 
     // 2. Inject DB Tables
     setDbTables({
@@ -99,22 +86,6 @@ Compare the \`Featured_Promos\` table — notice \`promo2\` has \`active: false\
         explanation: 'The "Shop Now" button has no onClick handler. Clicking it does nothing. It should navigate to the sale category.',
       },
       {
-        bugId: 'CAT-HOME-02', title: 'Hero banner claims 50% off but promo2 is inactive',
-        location: 'CatalogHome.tsx — hero banner text / mockDatabase', technique: 'Content Bug',
-        buggyCode: `<p style={{ color: '#000', marginBottom: '2rem' }}>Up to 50% off selected electronics.</p>
-// DB: { id: 'promo2', active: false, discount: '50%' }`,
-        fixedCode:  `<p style={{ color: '#000', marginBottom: '2rem' }}>Up to 20% off selected electronics.</p>
-// Only promo1 (active: true, discount: '20%') should be advertised`,
-        explanation: 'The active promotion is promo1 (20% off). promo2 (50% off) is inactive. The banner is advertising a discount that is not running.',
-      },
-      {
-        bugId: 'CAT-HOME-03', title: 'Hero carousel rotates every 1.5s instead of ~5s',
-        location: 'CatalogHome.tsx — carousel interval', technique: 'UX / Timing',
-        buggyCode: `}, 1500); // way too fast for users to read`,
-        fixedCode: `}, 5000);`,
-        explanation: 'The rotation interval is 1500ms, far below the ~5000ms a reader needs to actually read each slide.',
-      },
-      {
         bugId: 'CAT-HOME-04', title: 'Carousel interval and DOM nodes are never cleaned up',
         location: 'CatalogHome.tsx — carousel useEffect', technique: 'Memory Leak',
         buggyCode: `useEffect(() => {
@@ -139,83 +110,11 @@ const handleScroll = () => { /* use btnRef.current, cached once */ };`,
         explanation: 'getElementById runs on every single scroll event instead of caching the ref once, adding unnecessary DOM query overhead during scrolling.',
       },
       {
-        bugId: 'CAT-HOME-06', title: 'Empty featured state shows "Found NaN results"',
-        location: 'CatalogHome.tsx — resultCountText', technique: 'Boundary Value',
-        buggyCode: `const resultCountText = featured.length === 0
-  ? \`Found \${parseInt(undefined as any)} results\`
-  : \`Found \${featured.length} products\`;`,
-        fixedCode: `const resultCountText = featured.length === 0
-  ? 'No products found'
-  : \`Found \${featured.length} products\`;`,
-        explanation: 'parseInt(undefined) evaluates to NaN, so the empty/loading state literally renders the text "Found NaN results".',
-      },
-      {
-        bugId: 'CAT-HOME-07', title: 'Hero banner image is unoptimized full resolution',
-        location: 'CatalogHome.tsx — hero backgroundImage', technique: 'Performance',
-        buggyCode: `backgroundImage: 'url(https://images.unsplash.com/photo-...?auto=format&fit=crop)',`,
-        fixedCode: `backgroundImage: 'url(https://images.unsplash.com/photo-...?auto=format&fit=crop&w=1200&q=60)',`,
-        explanation: 'No width/quality params are passed to the image CDN, so a full-resolution image ships for a banner that renders at a fraction of that size.',
-      },
-      {
         bugId: 'CAT-HOME-08', title: 'Product description contains "Lorem ipsum" placeholder text',
         location: 'mockDatabase.ts — PROD-001 description', technique: 'Content Bug',
         buggyCode: `description: 'Stunning 4K resolution with smart capabilities. Lorem ipsum dolor sit amet.',`,
         fixedCode: `description: 'Stunning 4K resolution with smart capabilities and immersive AI-enhanced audio.',`,
         explanation: 'Leftover placeholder copy shipped to production is a classic content-QA catch — read every description, not just the UI chrome.',
-      },
-      {
-        bugId: 'CAT-HOME-09', title: 'Carousel dot indicators are not keyboard-accessible',
-        location: 'CatalogHome.tsx — carousel dots', technique: 'Accessibility',
-        buggyCode: `<span onClick={() => setCurrentSlide(i)} style={{ ... }} />`,
-        fixedCode: `<button type="button" aria-label={\`Go to slide \${i + 1}\`} onClick={() => setCurrentSlide(i)} />`,
-        explanation: 'A <span> with only an onClick handler has no tabIndex, role, or keyboard handler — keyboard-only users can never reach it.',
-      },
-      {
-        bugId: 'CAT-HOME-10', title: '"Shop by Category" cards are not keyboard-accessible',
-        location: 'CatalogHome.tsx — category grid', technique: 'Accessibility',
-        buggyCode: `<div className="glass-panel" onClick={() => navigate(...)}>{cat}</div>`,
-        fixedCode: `<button type="button" className="glass-panel" onClick={() => navigate(...)}>{cat}</button>`,
-        explanation: 'A clickable <div> is invisible to keyboard and screen-reader navigation. Interactive elements should be real buttons or links.',
-      },
-      {
-        bugId: 'CAT-HOME-11', title: 'Only the product title is clickable on featured cards',
-        location: 'CatalogHome.tsx — featured product cards', technique: 'Missing Functionality',
-        buggyCode: `<img src={p.images[0]} ... />
-<h4 onClick={() => navigate(\`/catalog/product/\${p.id}\`)}>{p.name}</h4>
-<div>\${p.price.toFixed(2)}</div>`,
-        fixedCode: `<div className="glass-panel" onClick={() => navigate(\`/catalog/product/\${p.id}\`)}>
-  {/* image, title and price all inside the clickable wrapper */}
-</div>`,
-        explanation: 'Only the <h4> title has an onClick — clicking the product image or price does nothing, an inconsistent and confusing target area.',
-      },
-      {
-        bugId: 'DATA-01', title: 'Very long product names overflow their card with no truncation',
-        location: 'mockDatabase.ts — PROD-001 / shared grid-card pattern', technique: 'Responsive Design',
-        buggyCode: `name: 'Ultra Premium 4K Smart TV with AI-Enhanced Noise-Cancelling Audio System and Built-in Streaming'
-// grid-card <h4> has no text-overflow / -webkit-line-clamp`,
-        fixedCode: `<h4 style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>`,
-        explanation: 'PROD-001\'s name is deliberately excessive. Every product grid (Home, Category, Search) renders it with no truncation, breaking card layout on narrow screens.',
-      },
-      {
-        bugId: 'LAYOUT-01', title: 'No responsive breakpoint — the QA Inspector squeezes the app on narrow screens',
-        location: 'CatalogV02Layout.tsx — split panes', technique: 'Responsive Design',
-        buggyCode: `<div style={{ flex: '7' }}><Outlet /></div>
-<div style={{ flex: '3', minWidth: '400px', maxWidth: '500px' }}><QAInspectorPanel /></div>`,
-        fixedCode: `@media (max-width: 900px) {
-  /* stack panes vertically, or collapse the inspector behind a toggle */
-}`,
-        explanation: 'The inspector\'s fixed 400px minWidth plus the app pane never adapts below roughly 900–1000px, forcing horizontal scrolling or crushed content on laptop-sized windows.',
-      },
-      {
-        bugId: 'LAYOUT-02', title: 'QA Inspector panel cannot be collapsed or hidden',
-        location: 'CatalogV02Layout.tsx — QA Inspector pane', technique: 'Missing Functionality',
-        buggyCode: `<div style={{ flex: '3', minWidth: '400px' }}>
-  <QAInspectorPanel />
-</div>
-{/* always visible, no toggle */}`,
-        fixedCode: `{inspectorOpen && <div style={{ flex: '3' }}><QAInspectorPanel /></div>}
-<button onClick={() => setInspectorOpen(o => !o)}>Toggle Inspector</button>`,
-        explanation: 'A tester who just wants to click through the app for pure functional testing has no way to reclaim the 30% of the viewport the panel permanently occupies.',
       },
     ]);
 
@@ -246,7 +145,7 @@ const handleScroll = () => { /* use btnRef.current, cached once */ };`,
     // BUG-074: intentionally omitting clearInterval(interval) cleanup
     // A correct implementation would return () => clearInterval(interval);
     void interval;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);  
 
   // BUG-081: Inefficient DOM queries — getElementById called on every scroll event
   useEffect(() => {
@@ -267,9 +166,8 @@ const handleScroll = () => { /* use btnRef.current, cached once */ };`,
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // BUG-097: Empty State Shows NaN
   const resultCountText = featured.length === 0
-    ? `Found ${parseInt(undefined as any)} results` // BUG-097: parseInt(undefined) → NaN
+    ? 'No products found'
     : `Found ${featured.length} products`;
 
   return (
