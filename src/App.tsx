@@ -7,7 +7,7 @@ import './index.css';
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
 const EcommerceApp = lazy(() => import('./apps/ecommerce').then(m => ({ default: m.EcommerceApp })));
 const BankApp = lazy(() => import('./apps/bank').then(m => ({ default: m.BankApp })));
-const HealthcareApp = lazy(() => import('./apps/HealthcareApp').then(m => ({ default: m.HealthcareApp })));
+const HealthcareApp = lazy(() => import('./apps/healthcare').then(m => ({ default: m.HealthcareApp })));
 const TradingApp = lazy(() => import('./apps/TradingApp').then(m => ({ default: m.TradingApp })));
 const RegistrationApp = lazy(() => import('./apps/registration').then(m => ({ default: m.RegistrationApp })));
 const HotelApp = lazy(() => import('./apps/HotelApp').then(m => ({ default: m.HotelApp })));
@@ -316,7 +316,7 @@ function App() {
               <BankApp />
             </ErrorBoundary>
           } />
-          <Route path="/healthcare" element={
+          <Route path="/healthcare/*" element={
             <ErrorBoundary appName="Patient Portal">
               <HealthcareApp />
             </ErrorBoundary>
