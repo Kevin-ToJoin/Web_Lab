@@ -19,7 +19,7 @@ test.describe('Bank App — Vault Online', () => {
     await expect(page.getByRole('tab', { name: 'DB' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'API' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Solutions' })).toBeVisible()
-    await expect(page.getByText('Bank Core System').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Vault Online Banking' })).toBeVisible()
   })
 
   test('Solutions are locked until the REVEAL code is entered', async ({ page }) => {
@@ -38,6 +38,8 @@ test.describe('Bank App — Vault Online', () => {
    * other owners' accounts and balances, instead of only the logged-in user's.
    */
   test('[BUG-BNK-03] account dropdown exposes other users accounts', async ({ page }) => {
+    // The transfer form moved to its own route in the refactor.
+    await page.goto('/bank/transfer')
     const fromSelect = page.locator('select.input-field').first()
     // Requirement: only Alice Morgan's accounts should appear.
     // Bug: Bob Carter and Carol Diaz accounts (and balances) are also listed.
@@ -49,6 +51,8 @@ test.describe('Bank App — Vault Online', () => {
    * KNOWN BUG — BNK-08: an empty amount is parsed as 0 and submitted instead of rejected.
    */
   test('[BUG-BNK-08] transfer with empty amount is accepted', async ({ page }) => {
+    // The transfer form moved to its own route in the refactor.
+    await page.goto('/bank/transfer')
     await page.getByPlaceholder('e.g. 1001-2002-9999').fill('1001-2002-9999')
     await page.getByRole('button', { name: 'Send Transfer' }).click()
 
