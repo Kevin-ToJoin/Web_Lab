@@ -21,6 +21,7 @@ on a laptop.
 |--------|---------|------|---------|------|
 | Catalog | `services/catalog` (TechMart) | 4002 | **search**, filtering, **pagination**, sorting, **reviews** | 13 |
 | Ecommerce | `services/ecommerce` (OrderFlow) | 4000 | HTTP status codes & contracts, DB integrity, **queues** | 19 |
+| Registration | `services/registration` (DevPortal) | 4003 | signup validation, **email verification**, **auth security** | 12 |
 | Bank | `services/bank` (Vault Online) | 4001 | transactions, **ledger integrity**, **concurrency**, money math | 12 |
 
 More modules (healthcare, delivery, …) drop in the same way — see

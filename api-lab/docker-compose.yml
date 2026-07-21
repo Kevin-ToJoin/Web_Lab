@@ -27,6 +27,7 @@ services:
       - ./services/ecommerce/schema.sql:/docker-entrypoint-initdb.d/10-ecommerce.sql:ro
       - ./services/bank/schema.sql:/docker-entrypoint-initdb.d/20-bank.sql:ro
       - ./services/catalog/schema.sql:/docker-entrypoint-initdb.d/30-catalog.sql:ro
+      - ./services/registration/schema.sql:/docker-entrypoint-initdb.d/40-registration.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
       interval: 3s
@@ -95,5 +96,17 @@ services:
       DATABASE_URL: postgres://lab:lab@db:5432/catalog
     ports:
       - "4002:4002"
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ── Registration module (DevPortal): signup, email verification, login ──
+  registration-api:
+    build: ./services/registration
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4003"
+      DATABASE_URL: postgres://lab:lab@db:5432/registration
+    ports:
+      - "4003:4003"
     depends_on:
       db: { condition: service_healthy }

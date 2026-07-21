@@ -1,0 +1,84 @@
+{
+  "info": {
+    "name": "TestLab 101 — DevPortal Registration (Registration module)",
+    "description": "A deliberately-buggy signup / email-verification / login backend. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4003" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    {
+      "name": "Signup — echoes password + weak rules (REGA-02/03/12)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"carol@dev.io\",\n  \"username\": \"carol\",\n  \"password\": \"1\",\n  \"age\": 30\n}" },
+        "url": "{{baseUrl}}/signup"
+      }
+    },
+    {
+      "name": "Signup — case-sensitive duplicate (REGA-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"Alice@Dev.io\",\n  \"username\": \"alice2\",\n  \"password\": \"Sup3rSecret!\",\n  \"age\": 34\n}" },
+        "url": "{{baseUrl}}/signup"
+      }
+    },
+    {
+      "name": "Signup — under-age accepted (REGA-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"kid@dev.io\",\n  \"username\": \"kid\",\n  \"password\": \"whatever1\",\n  \"age\": 5\n}" },
+        "url": "{{baseUrl}}/signup"
+      }
+    },
+    {
+      "name": "Verify — leading-zero bypass, seeded code 042519 (REGA-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"bob@dev.io\",\n  \"code\": \"42519\"\n}" },
+        "url": "{{baseUrl}}/verify"
+      }
+    },
+    {
+      "name": "Verify — expired code still works (REGA-06); run twice for replay (REGA-10)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"bob@dev.io\",\n  \"code\": \"042519\"\n}" },
+        "url": "{{baseUrl}}/verify"
+      }
+    },
+    {
+      "name": "Verify — already-verified account re-verifies (REGA-11)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@dev.io\",\n  \"code\": \"0\"\n}" },
+        "url": "{{baseUrl}}/verify"
+      }
+    },
+    {
+      "name": "Login — enumeration: unknown email (REGA-08)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@dev.io\",\n  \"password\": \"x\"\n}" },
+        "url": "{{baseUrl}}/login"
+      }
+    },
+    {
+      "name": "Login — enumeration: known email, wrong password (REGA-08)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@dev.io\",\n  \"password\": \"x\"\n}" },
+        "url": "{{baseUrl}}/login"
+      }
+    }
+  ]
+}
