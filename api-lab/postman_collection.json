@@ -1,0 +1,141 @@
+{
+  "info": {
+    "name": "TestLab 101 — OrderFlow API (API & Data track)",
+    "description": "A deliberately-buggy backend for QA practice. Each request below is a starting point for finding one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" }
+  ],
+  "item": [
+    {
+      "name": "Lab — requirements",
+      "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" }
+    },
+    {
+      "name": "Lab — reveal tagged bugs",
+      "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" }
+    },
+    {
+      "name": "Health (BUG-API-07: lies when DB is down)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "Products — list, huge limit (BUG-API-06)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/products?limit=1000000" }
+    },
+    {
+      "name": "Products — SQL injection in search (BUG-DB-04)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/products?search=' OR '1'='1" }
+    },
+    {
+      "name": "Products — missing id returns 200 null (BUG-API-01)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/products/9999" }
+    },
+    {
+      "name": "Login — wrong password returns 200 (BUG-API-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@shop.io\",\n  \"password\": \"wrong\"\n}" },
+        "url": "{{baseUrl}}/login"
+      }
+    },
+    {
+      "name": "Signup — duplicate email allowed (BUG-DB-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@shop.io\",\n  \"password\": \"x\"\n}" },
+        "url": "{{baseUrl}}/signup"
+      }
+    },
+    {
+      "name": "Order — valid (BUG-API-03: 200 not 201, no Location)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "1" },
+          { "key": "Idempotency-Key", "value": "demo-key-1" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [{ \"productId\": 1, \"quantity\": 1 }]\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — repeat same Idempotency-Key (BUG-API-08)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "1" },
+          { "key": "Idempotency-Key", "value": "demo-key-1" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [{ \"productId\": 1, \"quantity\": 1 }]\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — malformed payload returns 500 (BUG-API-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": \"not-an-array\"\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — partial write, no transaction (BUG-DB-03)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "1" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [\n    { \"productId\": 1, \"quantity\": 1 },\n    { \"productId\": 3, \"quantity\": 1 }\n  ]\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — poison message stalls the queue (BUG-Q-02)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "1" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [{ \"productId\": 1, \"quantity\": 1 }],\n  \"poison\": true\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — grinder job double-processes on retry (BUG-Q-01)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-User-Id", "value": "1" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"items\": [{ \"productId\": 4, \"quantity\": 1 }]\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — read another user's order, IDOR (BUG-SEC-01)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-User-Id", "value": "2" }],
+        "url": "{{baseUrl}}/orders/1"
+      }
+    },
+    {
+      "name": "Admin — users leak password_hash, no authz (BUG-SEC-02)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/admin/users" }
+    },
+    {
+      "name": "Admin — queue stats (watch BUG-Q-01 / BUG-Q-02)",
+      "request": { "method": "GET", "url": "{{baseUrl}}/admin/queue" }
+    }
+  ]
+}
