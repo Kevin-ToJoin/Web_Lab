@@ -139,11 +139,10 @@ const SolutionsLock = () => {
 // shows an "API Lab" tab explaining how to run it (real API + DB + network
 // testing that a mocked UI can't teach).
 export interface DockerLabInfo {
-  name: string;      // e.g. "TechMart Catalog API"
-  port: number;      // e.g. 4002
-  bugCount: number;  // bugs in the backend lab
-  repoUrl: string;   // GitHub folder with the compose file
-  guideUrl: string;  // step-by-step GETTING_STARTED guide
+  name: string;       // e.g. "TechMart Catalog API"
+  port: number;       // e.g. 4002
+  bugCount: number;   // bugs in the backend lab
+  composeUrl: string; // direct download of this module's docker-compose.yml
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -261,15 +260,13 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
             </div>
 
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <a href={dockerLab.guideUrl} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
-                Step-by-step guide →
-              </a>
-              <a href={dockerLab.repoUrl} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
-                Get the files →
+              <a href={dockerLab.composeUrl} download="docker-compose.yml" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
+                ⬇ Download docker-compose.yml
               </a>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', margin: 0 }}>
-              File your findings the same way (Report Bug), or reveal the tagged answers at
+              Save it into an empty folder, then run <code style={{ fontFamily: 'monospace' }}>docker compose up</code> there.
+              File your findings with Report Bug, or reveal the tagged answers at
               <code style={{ fontFamily: 'monospace' }}> /_lab/bugs?key=REVEAL</code>.
             </p>
           </div>
