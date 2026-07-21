@@ -11,6 +11,15 @@ import { mkdir, readdir, rename, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+// The downloadable Docker image builds with VITE_BASE=/ and serves the app at
+// the container root (http://localhost:8080/), so it must NOT be nested under
+// /Lab101/. Skip nesting whenever the base is the root path.
+const base = process.env.VITE_BASE ?? '/Lab101/';
+if (base === '/' || base === '') {
+  console.log(`VITE_BASE=${base || '/'} — leaving flat dist/ (no /Lab101 nesting).`);
+  process.exit(0);
+}
+
 const distDir = path.resolve(import.meta.dirname, '..', 'dist');
 const nestedDir = path.join(distDir, 'Lab101');
 

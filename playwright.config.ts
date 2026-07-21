@@ -29,9 +29,11 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
 
-  // Start the dev server automatically before running E2E tests
+  // Start the dev server automatically before running E2E tests. The production
+  // (Vercel) build serves under /Lab101/, but the specs navigate to bare paths
+  // like /hotel, so we run the dev server with VITE_BASE=/ to serve at the root.
   webServer: {
-    command: 'npm run dev',
+    command: 'VITE_BASE=/ npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

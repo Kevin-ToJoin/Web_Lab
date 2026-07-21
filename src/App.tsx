@@ -1,7 +1,7 @@
 
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Link } from 'react-router-dom';
-import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus, BedDouble, Utensils, GraduationCap, ShieldCheck, KeyRound } from 'lucide-react';
+import { Bug, ShoppingCart, Landmark, Activity, LineChart, ChevronRight, Home, UserPlus, BedDouble, Utensils, GraduationCap, ShieldCheck, KeyRound, Smartphone } from 'lucide-react';
 import './index.css';
 // Each app is code-split into its own lazy chunk to keep the initial bundle small.
 const CatalogAppV02 = lazy(() => import('./apps/catalog-v02').then(m => ({ default: m.CatalogAppV02 })));
@@ -15,6 +15,7 @@ const DeliveryApp = lazy(() => import('./apps/DeliveryApp').then(m => ({ default
 const ExamApp = lazy(() => import('./apps/ExamApp').then(m => ({ default: m.ExamApp })));
 const InsuranceApp = lazy(() => import('./apps/InsuranceApp').then(m => ({ default: m.InsuranceApp })));
 const AuthApp = lazy(() => import('./apps/AuthApp').then(m => ({ default: m.AuthApp })));
+const MobileApp = lazy(() => import('./apps/MobileApp').then(m => ({ default: m.MobileApp })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BugReporterProvider } from './context/BugReporterContext';
 import { BugReporterButton } from './components/BugReporter/BugReporterButton';
@@ -138,6 +139,16 @@ const MainMenu = () => {
       difficultyColor: 'var(--secondary)',
       icon: <KeyRound size={24} className="app-icon" style={{ color: 'var(--secondary)' }}/>,
       path: '/auth',
+    },
+    {
+      id: 'mobile',
+      title: 'Mobile Wallet (MobiTap)',
+      description: 'Mobile UX bugs: touch targets, viewport overflow, input types, gestures & a11y.',
+      level: 'Levels 3–5',
+      difficulty: 'Medium',
+      difficultyColor: 'var(--primary)',
+      icon: <Smartphone size={24} className="app-icon" style={{ color: 'var(--primary)' }}/>,
+      path: '/mobile',
     }
   ];
 
@@ -287,10 +298,15 @@ const NotFound = () => (
   </div>
 );
 
+// The router base is derived from Vite's BASE_URL (set from vite.config `base`).
+// Online (Vercel) builds under /Lab101/; the Docker image builds with VITE_BASE=/
+// and serves at the root, so the basename follows automatically.
+const ROUTER_BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
+
 function App() {
   return (
     <BugReporterProvider>
-      <Router basename="/Lab101">
+      <Router basename={ROUTER_BASENAME}>
         <Suspense fallback={
           <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', color: 'var(--text-muted)' }}>
             <Bug size={20} style={{ marginRight: '0.5rem' }} aria-hidden="true" /> Loading…
@@ -349,6 +365,11 @@ function App() {
           <Route path="/auth" element={
             <ErrorBoundary appName="Account Security (VaultAuth)">
               <AuthApp />
+            </ErrorBoundary>
+          } />
+          <Route path="/mobile" element={
+            <ErrorBoundary appName="Mobile Wallet (MobiTap)">
+              <MobileApp />
             </ErrorBoundary>
           } />
           <Route path="*" element={<NotFound />} />

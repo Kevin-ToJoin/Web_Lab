@@ -1,0 +1,22 @@
+# TestLab 101 — local QA practice sandbox.
+#
+#   docker compose up            # build from source and serve at :8080
+#
+# Or run the pre-built published image without cloning the source:
+#   docker run --rm -p 8080:80 ghcr.io/kevin-tojoin/web_lab:latest
+#
+# Then open http://localhost:8080/
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Serve at the container root for local practice.
+        VITE_BASE: "/"
+    # To skip the local build and pull the published image instead, comment out
+    # the `build:` block above and uncomment the line below:
+    # image: ghcr.io/kevin-tojoin/web_lab:latest
+    image: testlab101:local
+    ports:
+      - "8080:80"
+    restart: unless-stopped

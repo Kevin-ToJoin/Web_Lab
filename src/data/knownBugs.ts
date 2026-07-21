@@ -10,6 +10,7 @@ import { deliveryBugs } from './bugs/delivery';
 import { examBugs } from './bugs/exam';
 import { insuranceBugs } from './bugs/insurance';
 import { authBugs } from './bugs/auth';
+import { mobileBugs } from './bugs/mobile';
 
 export type { KnownBug };
 
@@ -27,6 +28,7 @@ export const knownBugs: KnownBug[] = [
   ...examBugs,
   ...insuranceBugs,
   ...authBugs,
+  ...mobileBugs,
 ];
 
 // Total injected bugs across the platform.
