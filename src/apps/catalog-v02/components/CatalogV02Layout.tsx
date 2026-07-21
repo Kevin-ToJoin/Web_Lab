@@ -12,11 +12,20 @@ export const CatalogV02Layout = () => {
         </div>
       </div>
 
-      {/* Right Side: QA Inspector (30%) — DB/API tabs hidden: the catalog's real
-          API & database testing lives in the downloadable Docker lab, so the web
-          inspector stays focused on Requirements, Bug Reporter, and Solutions. */}
+      {/* Right Side: QA Inspector (30%) — the catalog's real API & database
+          testing lives in the downloadable Docker lab, so the simulated DB/API
+          tabs are hidden and an "API Lab" tab explains how to download & run it. */}
       <div style={{ flex: '3', minWidth: '400px', maxWidth: '500px', borderLeft: '1px solid var(--glass-border)', zIndex: 10 }}>
-        <QAInspectorPanel showDataTabs={false} />
+        <QAInspectorPanel
+          showDataTabs={false}
+          dockerLab={{
+            name: 'TechMart Catalog API',
+            port: 4002,
+            bugCount: 13,
+            repoUrl: 'https://github.com/Kevin-ToJoin/Web_Lab/tree/main/api-lab/services/catalog',
+            guideUrl: 'https://github.com/Kevin-ToJoin/Web_Lab/blob/main/api-lab/services/catalog/GETTING_STARTED.md',
+          }}
+        />
       </div>
 
     </div>

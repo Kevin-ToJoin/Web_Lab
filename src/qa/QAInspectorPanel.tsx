@@ -135,13 +135,25 @@ const SolutionsLock = () => {
   );
 };
 
+// Info for a module's downloadable backend lab. When provided, the inspector
+// shows an "API Lab" tab explaining how to run it (real API + DB + network
+// testing that a mocked UI can't teach).
+export interface DockerLabInfo {
+  name: string;      // e.g. "TechMart Catalog API"
+  port: number;      // e.g. 4002
+  bugCount: number;  // bugs in the backend lab
+  repoUrl: string;   // GitHub folder with the compose file
+  guideUrl: string;  // step-by-step GETTING_STARTED guide
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 // `showDataTabs` (default true) controls the simulated DB + API tabs. Modules
 // whose real API/DB testing lives in the downloadable Docker lab (e.g. Catalog)
-// pass false so the web inspector stays focused on the presentation layer:
-// Requirements, the Bug Reporter, and Solutions.
-export const QAInspectorPanel = ({ showDataTabs = true }: { showDataTabs?: boolean }) => {
-  const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api' | 'solutions'>('reqs');
+// pass false and provide `dockerLab` so the web inspector stays focused on the
+// presentation layer (Requirements, Bug Reporter, Solutions) while pointing to
+// the real backend lab.
+export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataTabs?: boolean; dockerLab?: DockerLabInfo }) => {
+  const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api' | 'docker' | 'solutions'>('reqs');
   const { requirementsMarkdown, dbTables, apiEndpoints, solutions, solutionsUnlocked } = useQAPanel();
   const [apiResponses, setApiResponses] = useState<Record<number, string>>({});
   // Track the live request-body text per endpoint so the handler sees edits.
@@ -178,6 +190,9 @@ export const QAInspectorPanel = ({ showDataTabs = true }: { showDataTabs?: boole
       { id: 'db'  as const, label: 'DB',  icon: <Database size={14} aria-hidden="true" /> },
       { id: 'api' as const, label: 'API', icon: <TerminalSquare size={14} aria-hidden="true" /> },
     ] : []),
+    ...(dockerLab ? [
+      { id: 'docker' as const, label: 'API Lab', icon: <TerminalSquare size={14} aria-hidden="true" /> },
+    ] : []),
     { id: 'solutions' as const, label: 'Solutions',  icon: <Lightbulb size={14} aria-hidden="true" /> },
   ];
 
@@ -212,6 +227,51 @@ export const QAInspectorPanel = ({ showDataTabs = true }: { showDataTabs?: boole
             {requirementsMarkdown
               ? renderMarkdown(requirementsMarkdown)
               : <p style={{ color: 'var(--text-disabled)' }}>No requirements loaded for this page.</p>}
+          </div>
+        )}
+
+        {activeTab === 'docker' && dockerLab && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem', lineHeight: 1.6 }}>
+            <div>
+              <h3 style={{ color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.4rem' }}>🐳 API &amp; Data lab</h3>
+              <p style={{ color: 'var(--text-muted)' }}>
+                This module also ships a <strong style={{ color: 'var(--text-main)' }}>real backend</strong> you run on your own
+                computer — a live API and database — to practise testing that a mocked UI can't teach:
+                HTTP status codes, SQL/data integrity, search, pagination and reviews.
+                <strong style={{ color: 'var(--text-main)' }}> {dockerLab.bugCount} injected bugs</strong>.
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.9rem 1rem' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Run it in one command</div>
+              <ol style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <li>Install <a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Docker Desktop</a> (one time).</li>
+                <li>Download this module's <code style={{ fontFamily: 'monospace' }}>docker-compose.yml</code> into an empty folder.</li>
+                <li>Open a terminal there and run:</li>
+              </ol>
+              <pre style={{ margin: '0.6rem 0 0', background: '#0d1117', color: '#93c5fd', border: '1px solid #1e293b', borderRadius: '6px', padding: '0.6rem 0.8rem', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto' }}>docker compose up</pre>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Then open</div>
+              <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:{dockerLab.port}/_lab/requirements</code> — the API's rules<br />
+                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:8080</code> — Adminer (browse the database)
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <a href={dockerLab.guideUrl} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
+                Step-by-step guide →
+              </a>
+              <a href={dockerLab.repoUrl} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
+                Get the files →
+              </a>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', margin: 0 }}>
+              File your findings the same way (Report Bug), or reveal the tagged answers at
+              <code style={{ fontFamily: 'monospace' }}> /_lab/bugs?key=REVEAL</code>.
+            </p>
           </div>
         )}
 
