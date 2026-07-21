@@ -136,7 +136,11 @@ const SolutionsLock = () => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export const QAInspectorPanel = () => {
+// `showDataTabs` (default true) controls the simulated DB + API tabs. Modules
+// whose real API/DB testing lives in the downloadable Docker lab (e.g. Catalog)
+// pass false so the web inspector stays focused on the presentation layer:
+// Requirements, the Bug Reporter, and Solutions.
+export const QAInspectorPanel = ({ showDataTabs = true }: { showDataTabs?: boolean }) => {
   const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api' | 'solutions'>('reqs');
   const { requirementsMarkdown, dbTables, apiEndpoints, solutions, solutionsUnlocked } = useQAPanel();
   const [apiResponses, setApiResponses] = useState<Record<number, string>>({});
@@ -170,8 +174,10 @@ export const QAInspectorPanel = () => {
 
   const tabs = [
     { id: 'reqs'      as const, label: 'Reqs',      icon: <BookOpen size={14} aria-hidden="true" /> },
-    { id: 'db'        as const, label: 'DB',         icon: <Database size={14} aria-hidden="true" /> },
-    { id: 'api'       as const, label: 'API',        icon: <TerminalSquare size={14} aria-hidden="true" /> },
+    ...(showDataTabs ? [
+      { id: 'db'  as const, label: 'DB',  icon: <Database size={14} aria-hidden="true" /> },
+      { id: 'api' as const, label: 'API', icon: <TerminalSquare size={14} aria-hidden="true" /> },
+    ] : []),
     { id: 'solutions' as const, label: 'Solutions',  icon: <Lightbulb size={14} aria-hidden="true" /> },
   ];
 
