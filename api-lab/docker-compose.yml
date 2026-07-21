@@ -1,26 +1,35 @@
-# TestLab 101 — API & Data track.
-# One command to bring up a deliberately-buggy backend for QA practice:
-#   docker compose up --build
+# TestLab 101 — API & Data track (modular, one service per module).
 #
-# Services:
-#   api      → the buggy REST API                 http://localhost:4000
-#   worker   → the async job consumer (BullMQ)     (no port; watch via /admin/queue)
-#   db       → Postgres, seeded with known issues   localhost:5432
-#   redis    → queue backend                        localhost:6379
-#   adminer  → visual DB inspector                  http://localhost:8080
+# The frontend lab (tojoin.org/Lab101) is the presentation layer. THIS stack is
+# the backend layer: each frontend module gets a matching real API here, so you
+# can test the same domain at the integration/system/API/DB level with curl,
+# Postman, psql, and k6.
+#
+# All modules share ONE Postgres (one database each) and reuse infra. Bring up
+# everything, or just one module:
+#   docker compose up --build                 # all modules
+#   docker compose up --build ecommerce-api ecommerce-worker db redis
+#   docker compose up --build bank-api db
+#
+# Ports: ecommerce-api :4000 · bank-api :4001 · Adminer :8080 · Postgres :5432
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: lab
       POSTGRES_PASSWORD: lab
-      POSTGRES_DB: orderflow
+      POSTGRES_DB: lab
     ports:
       - "5432:5432"
     volumes:
-      - ./api/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      # 00 creates the per-module databases; each module mounts its own schema.
+      - ./db/00-databases.sql:/docker-entrypoint-initdb.d/00-databases.sql:ro
+      - ./services/ecommerce/schema.sql:/docker-entrypoint-initdb.d/10-ecommerce.sql:ro
+      - ./services/bank/schema.sql:/docker-entrypoint-initdb.d/20-bank.sql:ro
+      - ./services/registration/schema.sql:/docker-entrypoint-initdb.d/40-registration.sql:ro
+      # catalog self-applies its schema on startup (src/initDb.ts) — no mount needed.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lab -d orderflow"]
+      test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -35,12 +44,20 @@ services:
       timeout: 3s
       retries: 20
 
-  api:
-    build: ./api
+  adminer:
+    image: adminer:4
+    ports:
+      - "8080:8080"
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ── Ecommerce module (OrderFlow): HTTP contracts, DB integrity, queues ──
+  ecommerce-api:
+    build: ./services/ecommerce
     command: npx tsx src/server.ts
     environment:
       PORT: "4000"
-      DATABASE_URL: postgres://lab:lab@db:5432/orderflow
+      DATABASE_URL: postgres://lab:lab@db:5432/ecommerce
       REDIS_URL: redis://redis:6379
     ports:
       - "4000:4000"
@@ -48,19 +65,48 @@ services:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
 
-  worker:
-    build: ./api
+  ecommerce-worker:
+    build: ./services/ecommerce
     command: npx tsx src/worker.ts
     environment:
-      DATABASE_URL: postgres://lab:lab@db:5432/orderflow
+      DATABASE_URL: postgres://lab:lab@db:5432/ecommerce
       REDIS_URL: redis://redis:6379
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
 
-  adminer:
-    image: adminer:4
+  # ── Bank module (Vault Online): transactions, ledger integrity, concurrency ──
+  bank-api:
+    build: ./services/bank
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4001"
+      DATABASE_URL: postgres://lab:lab@db:5432/bank
     ports:
-      - "8080:8080"
+      - "4001:4001"
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ── Catalog module (TechMart): search, pagination, sorting, reviews ──
+  catalog-api:
+    build: ./services/catalog
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4002"
+      DATABASE_URL: postgres://lab:lab@db:5432/catalog
+    ports:
+      - "4002:4002"
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ── Registration module (DevPortal): signup, email verification, login ──
+  registration-api:
+    build: ./services/registration
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4003"
+      DATABASE_URL: postgres://lab:lab@db:5432/registration
+    ports:
+      - "4003:4003"
     depends_on:
       db: { condition: service_healthy }

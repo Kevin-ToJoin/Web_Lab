@@ -49,5 +49,5 @@ Legend: **Type** (Functional / Non-functional) · **Characteristic** (ISO 25010)
 ---
 
 Each bug's reproduction, expected-vs-actual, and one-line fix are in
-`api/src/knownBugs.ts` (and the live `GET /_lab/bugs?key=REVEAL`). The code that
+`src/knownBugs.ts` (and the live `GET /_lab/bugs?key=REVEAL`). The code that
 causes each one is marked with a matching `BUG-…` comment.

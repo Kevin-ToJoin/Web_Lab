@@ -1,4 +1,6 @@
--- OrderFlow API — schema + seed.
+\connect ecommerce
+
+-- OrderFlow API (Ecommerce module) — schema + seed.
 -- This schema deliberately ships with integrity gaps used as QA bugs:
 --   BUG-DB-01  users.email has NO UNIQUE constraint  → duplicate signups
 --   BUG-DB-02  order_items.product_id has NO FOREIGN KEY → orphan rows survive
