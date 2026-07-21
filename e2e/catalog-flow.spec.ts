@@ -17,7 +17,10 @@ import { test, expect, type Page } from '@playwright/test'
 // `waitForTimeout` sleeps: the CartContext writes to localStorage in a
 // useEffect, so navigating away too early can load an empty cart.
 const addOpenProductToCart = async (page: Page) => {
-  const addBtn = page.getByRole('button', { name: 'Add to Cart' })
+  // The Product Detail "Add to Cart" button is icon-only (BUG-013: no aria-label),
+  // so it has no accessible name to match by role. It is the first primary button
+  // on the page (the "Back to Catalog" button is a secondary button before it).
+  const addBtn = page.locator('button.btn-primary').first()
   await expect(addBtn).toBeVisible()
   await addBtn.click()
   await page.waitForFunction(() => {
@@ -160,9 +163,12 @@ test.describe('Category View', () => {
 test.describe('Product Detail', () => {
   test('displays product name, price, and add-to-cart button', async ({ page }) => {
     await page.goto('/catalog/product/PROD-001')
-    await expect(page.getByText('Ultra HD 4K Smart TV').first()).toBeVisible()
+    // PROD-001's name is now a very long string (BUG-037) — match a stable substring.
+    await expect(page.getByText('Ultra Premium 4K Smart TV').first()).toBeVisible()
     await expect(page.getByText('$599.99').first()).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add to Cart' })).toBeVisible()
+    // The add-to-cart button is icon-only (BUG-013, no accessible name); select the
+    // first primary button on the page instead of matching by role name.
+    await expect(page.locator('button.btn-primary').first()).toBeVisible()
   })
 
   /**
@@ -179,15 +185,18 @@ test.describe('Product Detail', () => {
   })
 
   /**
-   * KNOWN BUG — Level 2: "Add to Wishlist" button is permanently disabled
-   * Requirement: the wishlist button must be enabled and functional.
-   * Characterization: the button has the `disabled` attribute hardcoded.
+   * FIXED (was Level 2): "Add to Wishlist" button is no longer permanently disabled.
+   * The current ProductDetail renders an enabled wishlist button that toggles state
+   * on click (it now carries BUG-057 wishlist-desync instead of being hardcoded
+   * `disabled`). This test now asserts the button is enabled and toggles its label.
    */
   test('[BUG-L2] documents Add to Wishlist being permanently disabled', async ({ page }) => {
     await page.goto('/catalog/product/PROD-001')
     const wishlistBtn = page.getByRole('button', { name: 'Add to Wishlist' })
     await expect(wishlistBtn).toBeVisible()
-    await expect(wishlistBtn).toBeDisabled()
+    await expect(wishlistBtn).toBeEnabled()
+    await wishlistBtn.click()
+    await expect(page.getByRole('button', { name: 'Wishlisted' })).toBeVisible()
   })
 })
 

@@ -21,8 +21,7 @@ test.describe('Registration App — DevPortal', () => {
     await expect(page.getByRole('tab', { name: 'DB' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'API' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Solutions' })).toBeVisible()
-    // Reqs content (default tab)
-    await expect(page.getByText('Registration Portal').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Create Account' })).toBeVisible()
   })
 
   test('Solutions are locked until the REVEAL code is entered', async ({ page }) => {

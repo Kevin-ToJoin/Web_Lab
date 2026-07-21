@@ -19,7 +19,7 @@ test.describe('Trading App — QuantumTrader Pro', () => {
     await expect(page.getByRole('tab', { name: 'DB' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'API' })).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Solutions' })).toBeVisible()
-    await expect(page.getByText('Trading Dashboard').first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'QuantumTrader Pro', exact: true })).toBeVisible()
   })
 
   test('Solutions are locked until the REVEAL code is entered', async ({ page }) => {
