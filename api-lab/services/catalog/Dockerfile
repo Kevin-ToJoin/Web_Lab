@@ -10,7 +10,10 @@ RUN npm install
 COPY tsconfig.json ./
 COPY src ./src
 
-EXPOSE 4000
+# Bundle the SQL so the image is self-contained: the API applies its own schema
+# and seed on startup (src/initDb.ts). No mounted files needed.
+COPY schema.sql seed.sql ./
 
-# Overridden per-service in docker-compose.yml (server vs worker).
+EXPOSE 4002
+
 CMD ["npx", "tsx", "src/server.ts"]

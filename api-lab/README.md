@@ -29,7 +29,12 @@ More modules (healthcare, delivery, …) drop in the same way — see
 
 ## Quick start
 
-You need Docker. Then:
+**Beginners / one module, no build:** each module ships a standalone
+`docker-compose.yml` that *pulls a pre-built image* — download that one file and
+run `docker compose up`, nothing else. Start here:
+[Module 1 · Catalog — Getting Started](./services/catalog/GETTING_STARTED.md).
+
+**Developers / all modules from source:** you need Docker and this repo, then:
 
 ```bash
 cd api-lab

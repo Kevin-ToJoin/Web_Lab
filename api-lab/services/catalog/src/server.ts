@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { waitForDb } from './db.js';
+import { initDb } from './initDb.js';
 import { productsRouter } from './routes/products.js';
 import { reviewsRouter } from './routes/reviews.js';
 import { categoriesRouter } from './routes/categories.js';
@@ -37,8 +38,9 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = Number(process.env.PORT) || 4002;
 
 waitForDb()
+  .then(initDb)
   .then(() => app.listen(PORT, () => console.log(`TechMart Catalog API listening on :${PORT}`)))
   .catch(err => {
-    console.error('Failed to reach database:', err);
+    console.error('Startup failed:', err);
     process.exit(1);
   });
