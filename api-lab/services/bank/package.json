@@ -1,0 +1,22 @@
+{
+  "name": "vault-bank-api-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deliberately-buggy banking backend for QA practice — TestLab 101 Bank module.",
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.0.1",
+    "pg": "^8.13.1",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.7.2"
+  }
+}

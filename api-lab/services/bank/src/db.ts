@@ -3,13 +3,10 @@ import pg from 'pg';
 const { Pool } = pg;
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ?? 'postgres://lab:lab@localhost:5432/orderflow',
+  connectionString: process.env.DATABASE_URL ?? 'postgres://lab:lab@localhost:5432/bank',
   max: 10,
 });
 
-// Small helper so routes can run raw SQL. Kept intentionally thin — some
-// callers use parameterized queries (safe) and one deliberately does not
-// (BUG-DB-04, SQL injection).
 export const query = <T extends pg.QueryResultRow = pg.QueryResultRow>(
   text: string,
   params?: unknown[],
