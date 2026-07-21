@@ -26,6 +26,7 @@ services:
       - ./db/00-databases.sql:/docker-entrypoint-initdb.d/00-databases.sql:ro
       - ./services/ecommerce/schema.sql:/docker-entrypoint-initdb.d/10-ecommerce.sql:ro
       - ./services/bank/schema.sql:/docker-entrypoint-initdb.d/20-bank.sql:ro
+      - ./services/catalog/schema.sql:/docker-entrypoint-initdb.d/30-catalog.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
       interval: 3s
@@ -82,5 +83,17 @@ services:
       DATABASE_URL: postgres://lab:lab@db:5432/bank
     ports:
       - "4001:4001"
+    depends_on:
+      db: { condition: service_healthy }
+
+  # ── Catalog module (TechMart): search, pagination, sorting, reviews ──
+  catalog-api:
+    build: ./services/catalog
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4002"
+      DATABASE_URL: postgres://lab:lab@db:5432/catalog
+    ports:
+      - "4002:4002"
     depends_on:
       db: { condition: service_healthy }

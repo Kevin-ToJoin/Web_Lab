@@ -1,0 +1,42 @@
+{
+  "info": {
+    "name": "TestLab 101 — TechMart Catalog (Catalog module)",
+    "description": "A deliberately-buggy product-catalog backend. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4002" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Categories (ground truth for filters/counts)", "request": { "method": "GET", "url": "{{baseUrl}}/categories" } },
+    { "name": "Filter — Home Goods leaks Electronics (CATA-01)", "request": { "method": "GET", "url": "{{baseUrl}}/products?category=Home Goods" } },
+    { "name": "Search — case-sensitive (CATA-02)", "request": { "method": "GET", "url": "{{baseUrl}}/products?search=headphones" } },
+    { "name": "Pagination — total ignores filter (CATA-03)", "request": { "method": "GET", "url": "{{baseUrl}}/products?category=Apparel" } },
+    { "name": "Pagination — page past end returns last page (CATA-04)", "request": { "method": "GET", "url": "{{baseUrl}}/products?page=999&limit=2" } },
+    { "name": "Pagination — page=0 → 500 (CATA-05)", "request": { "method": "GET", "url": "{{baseUrl}}/products?page=0" } },
+    { "name": "Sort — ORDER BY injection (CATA-06)", "request": { "method": "GET", "url": "{{baseUrl}}/products?sort=(CASE WHEN 1=1 THEN price ELSE name END) DESC" } },
+    { "name": "Reviews — wrong product's reviews (CATA-07)", "request": { "method": "GET", "url": "{{baseUrl}}/products/2/reviews" } },
+    { "name": "Reviews — average truncated (CATA-08)", "request": { "method": "GET", "url": "{{baseUrl}}/products/1/reviews" } },
+    {
+      "name": "Reviews — rating out of range accepted (CATA-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"userName\": \"tester\",\n  \"rating\": 6,\n  \"comment\": \"nice\"\n}" },
+        "url": "{{baseUrl}}/products/1/reviews"
+      }
+    },
+    {
+      "name": "Reviews — stored XSS in comment (CATA-10)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"userName\": \"tester\",\n  \"rating\": 5,\n  \"comment\": \"<img src=x onerror=alert(1)>\"\n}" },
+        "url": "{{baseUrl}}/products/1/reviews"
+      }
+    },
+    { "name": "Detail — non-numeric id → 500 (CATA-11)", "request": { "method": "GET", "url": "{{baseUrl}}/products/abc" } },
+    { "name": "Detail — missing id returns product #1 (CATA-12)", "request": { "method": "GET", "url": "{{baseUrl}}/products/9999" } },
+    { "name": "List — N+1 with expand=reviews (CATA-13)", "request": { "method": "GET", "url": "{{baseUrl}}/products?expand=reviews" } }
+  ]
+}

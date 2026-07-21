@@ -3,3 +3,4 @@
 -- add a module, and mount its schema in docker-compose.yml.
 CREATE DATABASE ecommerce;
 CREATE DATABASE bank;
+CREATE DATABASE catalog;

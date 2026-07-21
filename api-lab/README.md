@@ -19,6 +19,7 @@ on a laptop.
 
 | Module | Service | Port | Teaches | Bugs |
 |--------|---------|------|---------|------|
+| Catalog | `services/catalog` (TechMart) | 4002 | **search**, filtering, **pagination**, sorting, **reviews** | 13 |
 | Ecommerce | `services/ecommerce` (OrderFlow) | 4000 | HTTP status codes & contracts, DB integrity, **queues** | 19 |
 | Bank | `services/bank` (Vault Online) | 4001 | transactions, **ledger integrity**, **concurrency**, money math | 12 |
 
