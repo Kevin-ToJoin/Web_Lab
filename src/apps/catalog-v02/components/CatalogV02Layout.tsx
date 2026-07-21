@@ -22,8 +22,9 @@ export const CatalogV02Layout = () => {
             name: 'TechMart Catalog API',
             port: 4002,
             bugCount: 13,
-            repoUrl: 'https://github.com/Kevin-ToJoin/Web_Lab/tree/main/api-lab/services/catalog',
-            guideUrl: 'https://github.com/Kevin-ToJoin/Web_Lab/blob/main/api-lab/services/catalog/GETTING_STARTED.md',
+            // Served by the web app itself (public/labs/) so the download works
+            // regardless of the source repo's visibility and never gets lost.
+            composeUrl: `${import.meta.env.BASE_URL}labs/catalog-docker-compose.yml`,
           }}
         />
       </div>
