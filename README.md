@@ -1,12 +1,13 @@
 # TestLab 101 — Web QA Training Platform
 
-A professional sandbox for QA engineers. Explore **11 real-looking web applications**, each
+A professional sandbox for QA engineers. Explore **12 real-looking web applications**, each
 containing **intentionally injected bugs** ranging from trivial (Level 1) to practically
 impossible (Level 10). Every app ships with an in-app **QA Inspector** (requirements, database
 viewer, live API tester, and locked solutions) and a global **Bug Reporter** for filing and
 scoring your findings.
 
-> **170 intentionally injected bugs** across 11 apps and 10 difficulty levels.
+> **290+ intentionally injected bugs** across 12 apps and 10 difficulty levels.
+> (Authoritative count: `TOTAL_BUGS` in `src/data/knownBugs.ts`.)
 
 ---
 
@@ -64,6 +65,36 @@ npm run test:e2e:ui    # Run Playwright in interactive UI mode
 
 ---
 
+## Run locally with Docker
+
+The platform is served two ways with **zero hosting cost**:
+
+- **Online (reference):** the full sandbox is published on the web under `tojoin.org/Lab101`.
+- **Local (practice):** download and run a self-contained Docker image so each learner has
+  their own isolated instance — no backend, no account, works offline. Practising against a
+  local container (`docker run` → test `localhost`) also mirrors a real QA workflow.
+
+### Option 1 — pull the published image (no source needed)
+
+```bash
+docker run --rm -p 8080:80 ghcr.io/kevin-tojoin/web_lab:latest
+```
+
+### Option 2 — build from source
+
+```bash
+docker compose up            # builds the image and serves it
+```
+
+Then open **http://localhost:8080/**.
+
+The image is a two-stage build (`node:22-alpine` builds the Vite app → `nginx:alpine` serves the
+static output). It is built with `VITE_BASE=/` so the app lives at the container root (the online
+build instead nests under `/Lab101/`). A GitHub Action (`.github/workflows/docker-publish.yml`)
+publishes the image to GitHub Container Registry on every push to `main`.
+
+---
+
 ## The Testing Environments
 
 | App | Route | Difficulty | Bug Levels | Bug Count | Focus / Techniques |
@@ -79,14 +110,16 @@ npm run test:e2e:ui    # Run Playwright in interactive UI mode
 | **Online Exam** (CertifyHub) | `/exam` | Hard | 5–7 | **14** | Countdown timer/auto-submit, pass-cutoff boundaries, scoring, negative marking |
 | **Insurance Quote** (SecureQuote) | `/insurance` | Expert | 7–9 | **14** | Multi-factor decision tables, premium multipliers, discount clamps |
 | **Account Security** (VaultAuth) | `/auth` | Expert | 6–9 | **14** | Password strength, token expiry, rate-limit lockout, sessions, 2FA, user enumeration |
-| | | | | **170** | **Total** |
+| **Mobile Wallet** (MobiTap) | `/mobile` | Medium | 3–5 | **14** | Mobile UX: touch targets, viewport overflow, input types, gestures, a11y, safe areas |
 
 > The hub page (`/`) lists every app with its difficulty badge and level range. The cards above
 > match the difficulty labels shown in-app. Note that the on-hub "Levels 1–2" copy for Product
 > Catalog reflects its starting levels; its bug registry actually spans Levels 1–10.
 
-Bug counts are sourced from the modular registry in `src/data/bugs/` and aggregated in
-`src/data/knownBugs.ts` (`TOTAL_BUGS = 170`).
+Several apps have had their bug catalogues expanded well beyond the counts shown above, so the
+**authoritative total is `TOTAL_BUGS`** exported from `src/data/knownBugs.ts` (aggregated from the
+modular per-app files in `src/data/bugs/`). The `knownBugs` registry test derives its per-app
+coverage from that registry, so it never goes stale as catalogues grow.
 
 ---
 
