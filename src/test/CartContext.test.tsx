@@ -2,18 +2,20 @@
  * CartContext.test.tsx
  *
  * Unit tests for the CartProvider context.
- * The CartContext has 7 intentional bugs across levels 3–10.
+ * The CartContext has several intentional bugs across levels 3–10.
  *
  * Test structure:
- *   ✅ Passing tests  → verify correct behavior exists
- *   ❌ Failing tests  → document known bugs (will fail until fixed)
+ *   ✅ Passing tests           → verify correct behavior exists
+ *   📝 Characterization tests  → assert a known bug currently EXISTS (green
+ *                                while the bug is present; invert once fixed)
  *
- * Each failing test is clearly labeled with its bug level so students
- * can trace the test back to the source code defect.
+ * Note: `addToCart` is intentionally async — it awaits a ~200ms delay to
+ * simulate the BUG-084 race condition — so every add must be awaited inside
+ * `await act(async () => { ... })` for the state update to flush.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, type RenderHookResult } from '@testing-library/react'
 import { type ReactNode } from 'react'
 import { CartProvider, useCart } from '../apps/catalog-v02/context/CartContext'
 import { type Product } from '../apps/catalog-v02/api/mockDatabase'
@@ -46,6 +48,15 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 // eslint-disable-next-line react-hooks/rules-of-hooks -- useCart runs inside renderHook's render callback
 const useCartSetup = () => renderHook(() => useCart(), { wrapper })
 
+type CartHook = RenderHookResult<ReturnType<typeof useCart>, unknown>
+
+// addToCart is async (200ms simulated delay); await it so the state flushes.
+const add = async (result: CartHook['result'], product: Product, qty: number) => {
+  await act(async () => { await result.current.addToCart(product, qty) })
+}
+
+beforeEach(() => { localStorage.clear() })
+
 // ─── Initial state ────────────────────────────────────────────────────────────
 
 describe('CartContext — initial state', () => {
@@ -61,24 +72,24 @@ describe('CartContext — initial state', () => {
 // ─── addToCart ────────────────────────────────────────────────────────────────
 
 describe('CartContext — addToCart', () => {
-  it('adds a new product to the cart', () => {
+  it('adds a new product to the cart', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 1) })
+    await add(result, PROD_002, 1)
     expect(result.current.items).toHaveLength(1)
     expect(result.current.items[0].id).toBe('PROD-002')
   })
 
-  it('increments quantity when the same product is added again', () => {
+  it('increments quantity when the same product is added again', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 1) })
-    act(() => { result.current.addToCart(PROD_002, 2) })
+    await add(result, PROD_002, 1)
+    await add(result, PROD_002, 2)
     expect(result.current.items).toHaveLength(1)
     expect(result.current.items[0].quantity).toBe(3)
   })
 
-  it('updates totalItems correctly after adding', () => {
+  it('updates totalItems correctly after adding', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 3) })
+    await add(result, PROD_002, 3)
     expect(result.current.totalItems).toBe(3)
   })
 
@@ -87,9 +98,9 @@ describe('CartContext — addToCart', () => {
    * Requirement: quantity must be ≥ 1. Negative quantities must be rejected.
    * Actual:      addToCart(-1) is accepted and subtracts from the total.
    */
-  it('documents KNOWN BUG (Level 3): addToCart accepts a negative quantity', () => {
+  it('documents KNOWN BUG (Level 3): addToCart accepts a negative quantity', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, -1) })
+    await add(result, PROD_002, -1)
 
     const hasNegativeQty = result.current.items.some(i => i.quantity <= 0)
     if (hasNegativeQty) {
@@ -106,10 +117,10 @@ describe('CartContext — addToCart', () => {
 // ─── removeFromCart ───────────────────────────────────────────────────────────
 
 describe('CartContext — removeFromCart', () => {
-  it('removes the correct product when given its ID', () => {
+  it('removes the correct product when given its ID', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 1) })
-    act(() => { result.current.addToCart(PROD_003, 1) })
+    await add(result, PROD_002, 1)
+    await add(result, PROD_003, 1)
     act(() => { result.current.removeFromCart('PROD-002') })
     expect(result.current.items).toHaveLength(1)
     expect(result.current.items[0].id).toBe('PROD-003')
@@ -121,11 +132,11 @@ describe('CartContext — removeFromCart', () => {
    * Actual:      It calls array.shift(), removing the FIRST item regardless of ID.
    *              If PROD-001 is not first, a different product is deleted.
    */
-  it('documents KNOWN BUG (Level 7): removeFromCart("PROD-001") deletes the first item, not by ID', () => {
+  it('documents KNOWN BUG (Level 7): removeFromCart("PROD-001") deletes the first item, not by ID', async () => {
     const { result } = useCartSetup()
     // Add PROD-002 first, then PROD-001 — PROD-001 is now at index 1
-    act(() => { result.current.addToCart(PROD_002, 1) })
-    act(() => { result.current.addToCart(PROD_001, 1) })
+    await add(result, PROD_002, 1)
+    await add(result, PROD_001, 1)
     act(() => { result.current.removeFromCart('PROD-001') })
 
     const remaining = result.current.items
@@ -148,29 +159,32 @@ describe('CartContext — removeFromCart', () => {
    * Requirement: totalItems must decrease after removeFromCart.
    * Actual:      removeFromCart does NOT update totalItems — the counter goes stale.
    */
-  it('documents KNOWN BUG (Level 5): totalItems goes stale after removing a product', () => {
+  it('documents KNOWN BUG (Level 5): totalItems goes stale after removing a product', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 2) })
-    expect(result.current.totalItems).toBe(2)
+    // Two distinct products so removeFromCart is not blocked by the
+    // "cannot remove the last item" guard (BUG-058).
+    await add(result, PROD_002, 2)
+    await add(result, PROD_003, 1)
+    expect(result.current.totalItems).toBe(3)
 
     act(() => { result.current.removeFromCart('PROD-002') })
 
-    if (result.current.totalItems !== 0) {
-      console.warn(`[KNOWN BUG - Level 5] totalItems is ${result.current.totalItems} after removing all items (expected 0).`)
+    if (result.current.totalItems === 3) {
+      console.warn(`[KNOWN BUG - Level 5] totalItems is still ${result.current.totalItems} after removing a product.`)
     }
 
-    // Requirement: totalItems should drop to 0. Characterization: removeFromCart
-    // never updates the counter, so it stays stale at 2.
-    expect(result.current.totalItems).toBe(2)
+    // Requirement: totalItems should drop (to 1). Characterization: removeFromCart
+    // never updates the counter, so it stays stale at 3.
+    expect(result.current.totalItems).toBe(3)
   })
 })
 
 // ─── updateQuantity ───────────────────────────────────────────────────────────
 
 describe('CartContext — updateQuantity', () => {
-  it('updates the quantity of a specific item', () => {
+  it('updates the quantity of a specific item', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(PROD_002, 1) })
+    await add(result, PROD_002, 1)
     act(() => { result.current.updateQuantity('PROD-002', 5) })
     expect(result.current.items[0].quantity).toBe(5)
   })
@@ -179,21 +193,16 @@ describe('CartContext — updateQuantity', () => {
 // ─── applyPromo ───────────────────────────────────────────────────────────────
 
 describe('CartContext — applyPromo', () => {
-  beforeEach(() => {
-    // Mock localStorage for each test
-    localStorage.clear()
-  })
-
-  it('applies 20% discount for valid code SAVE20', () => {
+  it('applies 20% discount for valid code SAVE20', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+    await add(result, makeProduct({ price: 100 }), 1)
     act(() => { result.current.applyPromo('SAVE20') })
     expect(result.current.discount).toBeCloseTo(20, 1)
   })
 
-  it('applies 10% discount for valid code FALL10', () => {
+  it('applies 10% discount for valid code FALL10', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+    await add(result, makeProduct({ price: 100 }), 1)
     act(() => { result.current.applyPromo('FALL10') })
     expect(result.current.discount).toBeCloseTo(10, 1)
   })
@@ -204,11 +213,11 @@ describe('CartContext — applyPromo', () => {
    * Actual:      The regex /.*20$/ accepts ANY string ending in "20"
    *              (e.g., "HACK20", "INVALID20", "00000020").
    */
-  it('documents KNOWN BUG (Level 8): fake promo codes ending in "20" are accepted', () => {
+  it('documents KNOWN BUG (Level 8): fake promo codes ending in "20" are accepted', async () => {
     const INVALID_CODES = ['HACK20', 'INVALID20', 'AAA20', '00020', 'NOTACODE20']
     for (const code of INVALID_CODES) {
       const { result } = renderHook(() => useCart(), { wrapper })
-      act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+      await add(result, makeProduct({ price: 100 }), 1)
       act(() => { result.current.applyPromo(code) })
 
       if (result.current.discount > 0) {
@@ -226,10 +235,10 @@ describe('CartContext — applyPromo', () => {
    * Requirement: discount logic must use server-validated promo codes only.
    * Actual:      Setting localStorage.isAdmin='true' gives 100% discount.
    */
-  it('documents KNOWN BUG (Level 9): localStorage.isAdmin grants a 100% discount', () => {
+  it('documents KNOWN BUG (Level 9): localStorage.isAdmin grants a 100% discount', async () => {
     localStorage.setItem('isAdmin', 'true')
     const { result } = renderHook(() => useCart(), { wrapper })
-    act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+    await add(result, makeProduct({ price: 100 }), 1)
 
     if (result.current.discount >= result.current.subtotal) {
       console.warn(`[KNOWN BUG - Level 9] localStorage.setItem('isAdmin','true') granted 100% discount. Discount: ${result.current.discount}, Subtotal: ${result.current.subtotal}`)
@@ -244,8 +253,6 @@ describe('CartContext — applyPromo', () => {
 // ─── Tax calculation ──────────────────────────────────────────────────────────
 
 describe('CartContext — tax calculation', () => {
-  beforeEach(() => { localStorage.clear() })
-
   /**
    * KNOWN BUG — Level 8: Complex Logic
    * Requirement: Tax (8%) must be calculated on subtotal AFTER discount.
@@ -253,9 +260,9 @@ describe('CartContext — tax calculation', () => {
    * Actual:      Tax is calculated on raw subtotal before discount is applied.
    *              Formula: Tax = Subtotal × 0.08  ← wrong when promo active
    */
-  it('documents KNOWN BUG (Level 8): tax is calculated before the discount is applied', () => {
+  it('documents KNOWN BUG (Level 8): tax is calculated before the discount is applied', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+    await add(result, makeProduct({ price: 100 }), 1)
     act(() => { result.current.applyPromo('SAVE20') }) // 20% off → subtotal 100, discount 20
 
     // Correct: Tax = (100 - 20) × 0.08 = 6.40
@@ -271,9 +278,9 @@ describe('CartContext — tax calculation', () => {
     expect(result.current.tax).toBeCloseTo(buggyTax, 1)
   })
 
-  it('calculates tax correctly without any promo (no bug here)', () => {
+  it('calculates tax correctly without any promo (no bug here)', async () => {
     const { result } = useCartSetup()
-    act(() => { result.current.addToCart(makeProduct({ price: 100 }), 1) })
+    await add(result, makeProduct({ price: 100 }), 1)
     // No promo → subtotal = 100, tax = 100 × 0.08 = 8.00 (correct in this case)
     expect(result.current.tax).toBeCloseTo(8.0, 1)
   })
@@ -288,10 +295,10 @@ describe('CartContext — Level 10: floating-point precision', () => {
    * Actual:      Repeated floating-point additions cause sub-cent drift
    *              (e.g., 249.50 × 3 + 8% tax = 808.38000000000001).
    */
-  it('total has at most 2 decimal places for payment processing', () => {
+  it('total has at most 2 decimal places for payment processing', async () => {
     const { result } = useCartSetup()
     // $249.50 is a known trigger for float issues
-    act(() => { result.current.addToCart(PROD_002, 3) }) // 249.50 × 3 = 748.50
+    await add(result, PROD_002, 3) // 249.50 × 3 = 748.50
     // + 8% tax = 808.38 (but floating point may produce 808.3800000000001)
 
     const total = result.current.total

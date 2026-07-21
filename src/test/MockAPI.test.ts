@@ -77,7 +77,11 @@ describe('MockAPI.getProductById — happy path', () => {
   it('returns the correct product by ID', async () => {
     const product = await MockAPI.getProductById('PROD-001')
     expect(product.id).toBe('PROD-001')
-    expect(product.name).toBe('Ultra HD 4K Smart TV')
+    // Assert against the source database rather than a hard-coded string so the
+    // test does not break when product copy is edited.
+    const expected = database.products.find(p => p.id === 'PROD-001')
+    expect(product.name).toBe(expected?.name)
+    expect(product.name.length).toBeGreaterThan(0)
   })
 
   it('throws 404 for a non-existent product ID', async () => {
