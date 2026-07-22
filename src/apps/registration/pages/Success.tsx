@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useRegistration } from '../context/RegistrationContext';
 
 export const Success = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { firstName, reviewEmail, registrations } = useRegistration();
 
   useEffect(() => {
@@ -35,31 +35,8 @@ URL: \`/registration/success\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'REG-27', title: 'Refreshing the success page degrades it to empty text', location: 'Success.tsx / RegistrationContext.tsx',
-        technique: 'Stale State / Persistence',
-        buggyCode: '<p>Welcome, <strong>{firstName}</strong>.</p>\n// context state resets on refresh → "Welcome, ."',
-        fixedCode: '// Persist the confirmation payload (name/email) before navigating here,\n// or redirect to /registration when the wizard state is empty.',
-        explanation: 'All wizard state lives in memory. A refresh renders "Welcome, ." and an empty email line instead of a coherent confirmation.',
-      },
-      {
-        bugId: 'REG-28', title: 'Success is not announced to assistive technology', location: 'Success.tsx — heading',
-        technique: 'Accessibility',
-        buggyCode: '<h1>Account Created!</h1> // no aria-live, no focus() on mount',
-        fixedCode: '<h1 tabIndex={-1} ref={headingRef} aria-live="polite">Account Created!</h1>\nuseEffect(() => { headingRef.current?.focus(); }, []);',
-        explanation: 'A screen-reader user completing the wizard gets no announcement that the account was actually created.',
-      },
-      {
-        bugId: 'REG-29', title: 'No path to the Verify Email page', location: 'Success.tsx — page body',
-        technique: 'Missing Functionality',
-        buggyCode: '<p>A verification email was sent to ...</p>\n<button onClick={() => navigate("/")}>Back to Hub</button>\n// /registration/verify exists but nothing links to it',
-        fixedCode: '<button onClick={() => navigate("/registration/verify")}>Enter verification code</button>',
-        explanation: 'The message promises a verification email, but the page where the code can be entered is unreachable from the normal flow.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [registrations, reviewEmail, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'registration', bugIds: ['REG-27', 'REG-28', 'REG-29'] });
+  }, [registrations, reviewEmail, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="container animate-fade-in" style={{ textAlign: 'center', paddingTop: '5rem' }}>

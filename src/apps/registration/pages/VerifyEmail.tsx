@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, MailCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { VERIFICATION_CODES } from '../context/RegistrationContext';
 
 // The code "sent" to the user. Compare against what the tester types.
@@ -9,7 +9,7 @@ const SENT_CODE = VERIFICATION_CODES[0];
 
 export const VerifyEmail = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [code, setCode] = useState('');
   const [status, setStatus] = useState('');
@@ -59,45 +59,8 @@ URL: \`/registration/verify\`
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'REG-30', title: 'Code field accepts letters and any length', location: 'VerifyEmail.tsx — code input',
-        technique: 'Boundary Value',
-        buggyCode: '<input type="text" value={code} onChange={...} /> // no maxLength, no pattern',
-        fixedCode: '<input type="text" maxLength={6} pattern="[0-9]{6}" value={code} onChange={...} />',
-        explanation: 'Anything can be typed into the 6-digit code field — no format constraint exists before submission.',
-      },
-      {
-        bugId: 'REG-31', title: 'Codes are compared numerically — leading zeros are ignored', location: 'VerifyEmail.tsx — handleVerify()',
-        technique: 'Equivalence Partitioning',
-        buggyCode: 'const valid = Number(code) === Number(SENT_CODE.code);\n// Number("42519") === Number("042519") → true',
-        fixedCode: 'const valid = code.trim() === SENT_CODE.code;',
-        explanation: 'Casting both sides to Number strips leading zeros, so the 5-digit "42519" wrongly verifies against the sent code "042519". Compare as strings.',
-      },
-      {
-        bugId: 'REG-32', title: 'Expired verification codes are still accepted', location: 'VerifyEmail.tsx — handleVerify()',
-        technique: 'Logic Bug',
-        buggyCode: 'const valid = Number(code) === Number(SENT_CODE.code);\n// SENT_CODE.expiresAt is never read',
-        fixedCode: 'if (new Date(SENT_CODE.expiresAt) < new Date()) return setStatus("Code expired — request a new one.");',
-        explanation: 'The DB clearly marks the code EXPIRED (expiresAt in the past), but verification never checks it.',
-      },
-      {
-        bugId: 'REG-33', title: 'Resend code has no cooldown', location: 'VerifyEmail.tsx — handleResend()',
-        technique: 'Abuse / Rate Limiting',
-        buggyCode: 'const handleResend = () => setResends(c => c + 1); // fires on every click',
-        fixedCode: 'Disable the button for 30–60s after each send (cooldown timer).',
-        explanation: 'Ten rapid clicks queue ten "emails" (see Resend_Log) — a spam and cost vector in a real system.',
-      },
-      {
-        bugId: 'REG-34', title: 'Code input lacks inputMode and one-time-code autofill', location: 'VerifyEmail.tsx — code input',
-        technique: 'Mobile UX',
-        buggyCode: '<input type="text" value={code} ... />',
-        fixedCode: '<input type="text" inputMode="numeric" autoComplete="one-time-code" value={code} ... />',
-        explanation: 'Without inputMode="numeric" and autocomplete="one-time-code", mobile users get a full keyboard and lose OS-level SMS/email code autofill.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [resends, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'registration', bugIds: ['REG-30', 'REG-31', 'REG-32', 'REG-33', 'REG-34'] });
+  }, [resends, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleVerify = () => {
     // BUG REG-31: numeric comparison ignores leading zeros.

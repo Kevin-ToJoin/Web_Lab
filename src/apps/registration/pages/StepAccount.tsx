@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../../../qa/QAContext';
 import { useRegistration, USERS_TABLE, EMAIL_REGEX } from '../context/RegistrationContext';
 import { WizardChrome } from './WizardChrome';
 
 export const StepAccount = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const {
     email, setEmail, password, setPassword, confirmPassword, setConfirmPassword,
     phone, setPhone, zip, setZip,
@@ -97,80 +97,8 @@ URL: \`/registration/account\`
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'REG-03', title: 'Email validation accepts invalid addresses', location: 'RegistrationContext.tsx — EMAIL_REGEX',
-        technique: 'Equivalence Partitioning',
-        buggyCode: 'const EMAIL_REGEX = /.+@.+/;',
-        fixedCode: 'const EMAIL_REGEX = /^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/;',
-        explanation: '/.+@.+/ accepts "a@b" and "@b.com". Require a local part, domain, and TLD.',
-      },
-      {
-        bugId: 'REG-04', title: 'Password does not require an uppercase letter', location: 'RegistrationContext.tsx — validateStep2()',
-        technique: 'Regex Flaw',
-        buggyCode: 'else if (!/[0-9]/.test(password)) { errs.password = "...one number."; }',
-        fixedCode: 'else if (!/[0-9]/.test(password) || !/[A-Z]/.test(password)) {\n  errs.password = "Need 1 number and 1 uppercase.";\n}',
-        explanation: 'The uppercase requirement is never checked, so "password1" passes. Add /[A-Z]/.',
-      },
-      {
-        bugId: 'REG-05', title: 'Confirm password trims only one side', location: 'RegistrationContext.tsx — validateStep2()',
-        technique: 'Logic Bug',
-        buggyCode: 'if (password !== confirmPassword.trim()) {',
-        fixedCode: 'if (password !== confirmPassword) {',
-        explanation: 'Trimming only confirmPassword makes "Secret12 " equal "Secret12". Compare exactly.',
-      },
-      {
-        bugId: 'REG-06', title: 'Phone field accepts letters and symbols', location: 'RegistrationContext.tsx — validateStep2() / phone input',
-        technique: 'Input Type',
-        buggyCode: '<input type="text" .../>\nif (phone.trim() === "") { errs.phone = "..."; }',
-        fixedCode: 'if (!/^[0-9()+\\-\\s]{7,}$/.test(phone)) { errs.phone = "Numeric phone required."; }',
-        explanation: 'A type="text" field with a non-empty-only check accepts "hello". Validate digits.',
-      },
-      {
-        bugId: 'REG-09', title: 'ZIP / postal code accepts letters', location: 'RegistrationContext.tsx — validateStep2()',
-        technique: 'Equivalence Partitioning',
-        buggyCode: 'if (zip.trim() === "") { errs.zip = "ZIP / postal code is required."; }',
-        fixedCode: 'if (!/^[0-9]{5}$/.test(zip)) { errs.zip = "ZIP must be 5 digits."; }',
-        explanation: 'Only non-empty is checked, so "ABCDE" passes. Require a 5-digit numeric code.',
-      },
-      {
-        bugId: 'REG-14', title: 'Duplicate email is not checked', location: 'RegistrationContext.tsx — validateStep2()',
-        technique: 'Logic Bug',
-        buggyCode: '// no uniqueness check against Users_Table',
-        fixedCode: 'if (USERS_TABLE.some(u => u.email.toLowerCase() === email.trim().toLowerCase())) {\n  errs.email = "Email already registered.";\n}',
-        explanation: '"existing@devportal.com" can re-register because no uniqueness check runs. Compare against Users_Table.',
-      },
-      {
-        bugId: 'REG-21', title: 'Email and phone have no maximum length', location: 'StepAccount.tsx — email/phone inputs',
-        technique: 'Boundary Value',
-        buggyCode: '<input type="email" value={email} ... /> // no maxLength\n<input type="text" value={phone} ... /> // no maxLength',
-        fixedCode: '<input type="email" maxLength={254} value={email} ... />\n<input type="text" maxLength={20} value={phone} ... />',
-        explanation: 'Arbitrarily long values are accepted in both fields, with no client-side cap.',
-      },
-      {
-        bugId: 'REG-22', title: 'Phone and ZIP lack inputMode="numeric"', location: 'StepAccount.tsx — phone/zip inputs',
-        technique: 'Mobile UX',
-        buggyCode: '<input type="text" value={phone} ... />\n<input type="text" value={zip} ... />',
-        fixedCode: '<input type="text" inputMode="numeric" value={phone} ... />\n<input type="text" inputMode="numeric" pattern="[0-9]*" value={zip} ... />',
-        explanation: 'Mobile browsers show the full text keyboard for digits-only fields, forcing a manual keyboard switch.',
-      },
-      {
-        bugId: 'REG-23', title: 'Step 2 is reachable by URL without completing Step 1', location: 'index.tsx routes / StepAccount.tsx',
-        technique: 'Routing Guard',
-        buggyCode: '<Route path="account" element={<StepAccount />} />\n// no guard checking that Step 1 data exists',
-        fixedCode: 'if (!firstName || !username) return <Navigate to="/registration" replace />;',
-        explanation: 'Deep-linking straight to /registration/account skips Step 1 entirely — the wizard can be completed with blank personal data.',
-      },
-      {
-        bugId: 'REG-24', title: 'Focus does not move to the first invalid field', location: 'StepAccount.tsx — handleNext()',
-        technique: 'Accessibility',
-        buggyCode: 'if (validateStep2()) { navigate(...); }\n// on failure, focus stays on the Next button',
-        fixedCode: 'const firstError = Object.keys(errs)[0];\ndocument.getElementById(firstError)?.focus();',
-        explanation: 'After a failed submit, keyboard and screen-reader users are left on the button with no guidance to the failing field.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'registration', bugIds: ['REG-03', 'REG-04', 'REG-05', 'REG-06', 'REG-09', 'REG-14', 'REG-21', 'REG-22', 'REG-23', 'REG-24'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const inputStyle = (field: string) => ({
     border: errors[field] ? '1px solid var(--danger)' : '1px solid var(--glass-border)',
