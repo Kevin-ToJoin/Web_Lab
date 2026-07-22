@@ -7,3 +7,4 @@ CREATE DATABASE catalog;
 CREATE DATABASE registration;
 CREATE DATABASE healthcare;
 CREATE DATABASE trading;
+CREATE DATABASE hotel;

@@ -1,0 +1,60 @@
+name: Publish Hotel API image
+
+# Builds the Module 5 (Patient Portal / Hotel) backend and publishes it to
+# the GitHub Container Registry so beginners can run the lab with no source, no
+# build:
+#   docker compose up   (using api-lab/services/hotel/docker-compose.yml)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api-lab/services/hotel/**'
+      - '.github/workflows/docker-hotel.yml'
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    name: Build & push hotel-api
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive lowercase image name
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/hotel-api" >> "$GITHUB_OUTPUT"
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.img.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha,format=short
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api-lab/services/hotel
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

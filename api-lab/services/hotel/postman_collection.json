@@ -1,0 +1,74 @@
+{
+  "info": {
+    "name": "TestLab 101 — StayEasy (Hotel module)",
+    "description": "A deliberately-buggy hotel-booking backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4006" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Rooms — list", "request": { "method": "GET", "url": "{{baseUrl}}/rooms" } },
+
+    {
+      "name": "Booking — check_out on/before check_in (HOTL-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"room_id\": 1,\n  \"guest_name\": \"X\",\n  \"guest_email\": \"x@y.io\",\n  \"user_id\": 9,\n  \"check_in\": \"2999-03-05\",\n  \"check_out\": \"2999-03-05\",\n  \"guests\": 1\n}" },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Booking — OVERBOOK room 3 over its stay (HOTL-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"room_id\": 3,\n  \"guest_name\": \"X\",\n  \"guest_email\": \"x@y.io\",\n  \"user_id\": 9,\n  \"check_in\": \"2999-01-06T15:00:00\",\n  \"check_out\": \"2999-01-07T11:00:00\",\n  \"guests\": 2\n}" },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Booking — inclusive nights off-by-one (HOTL-03/04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"room_id\": 1,\n  \"guest_name\": \"X\",\n  \"guest_email\": \"x@y.io\",\n  \"user_id\": 9,\n  \"check_in\": \"2999-04-01\",\n  \"check_out\": \"2999-04-03\",\n  \"guests\": 1\n}" },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Booking — guests over capacity (HOTL-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"room_id\": 1,\n  \"guest_name\": \"X\",\n  \"guest_email\": \"x@y.io\",\n  \"user_id\": 9,\n  \"check_in\": \"2999-05-01\",\n  \"check_out\": \"2999-05-03\",\n  \"guests\": 6\n}" },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Booking — 150% discount, negative total (HOTL-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"room_id\": 1,\n  \"guest_name\": \"X\",\n  \"guest_email\": \"x@y.io\",\n  \"user_id\": 9,\n  \"check_in\": \"2999-06-01\",\n  \"check_out\": \"2999-06-03\",\n  \"discount\": 1.5\n}" },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    {
+      "name": "Booking — malformed JSON → 500 html (HOTL-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"room_id\": 1, " },
+        "url": "{{baseUrl}}/bookings"
+      }
+    },
+    { "name": "Booking — 'arrivals' timezone drift (HOTL-07)", "request": { "method": "GET", "url": "{{baseUrl}}/bookings/arrivals" } },
+    { "name": "Booking — missing id returns 200 null (HOTL-08)", "request": { "method": "GET", "url": "{{baseUrl}}/bookings/9999" } },
+    { "name": "Booking — PII leak, guest email (HOTL-11)", "request": { "method": "GET", "url": "{{baseUrl}}/bookings/1" } },
+    { "name": "Booking — cancel a checked-out one (HOTL-10)", "request": { "method": "POST", "url": "{{baseUrl}}/bookings/2/cancel" } },
+    { "name": "Admin — no authz, all bookings + PII (HOTL-12)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/bookings" } }
+  ]
+}
