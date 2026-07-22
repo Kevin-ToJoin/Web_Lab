@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const CheckoutShipping = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   
   const [address, setAddress] = useState('');
   const [zip, setZip] = useState('');
@@ -49,16 +49,8 @@ export const CheckoutShipping = () => {
       }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'SHIP-01', title: 'Zip code accepts non-numeric characters',
-        location: 'CheckoutShipping.tsx', technique: 'Boundary Value',
-        buggyCode: `<input type="text" placeholder="ZIP Code" />`,
-        fixedCode: `<input type="text" pattern="[0-9]{5}" maxLength={5} placeholder="ZIP Code" />`,
-        explanation: 'Zip code input has no validation — letters, symbols, and values of any length are accepted.',
-      },
-    ]);
-  }, [zip, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['SHIP-01'] });
+  }, [zip, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleContinue = () => {
     // BUG: Missing validation completely. It just navigates!

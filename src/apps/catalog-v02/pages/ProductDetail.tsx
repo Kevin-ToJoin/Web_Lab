@@ -19,7 +19,7 @@ export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,52 +84,7 @@ export const ProductDetail = () => {
       { method: 'POST', path: '/api/v1/cart', description: 'Add item to cart.', payloadTemplate: '{\n  "productId": "PROD-1",\n  "qty": 1\n}' }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'PDP-02', title: 'Price tooltip stays in place while scrolling',
-        location: 'ProductDetail.tsx — price info tooltip', technique: 'CSS Bug',
-        buggyCode: `style={{ position: 'fixed', ... }}`,
-        fixedCode: `style={{ position: 'absolute', ... }}`,
-        explanation: 'position: fixed anchors the tooltip to the viewport instead of its trigger, so it visibly detaches and floats while the page scrolls.',
-      },
-      {
-        bugId: 'PDP-03', title: 'Quick View modal traps focus with no escape and no focus return',
-        location: 'ProductDetail.tsx — handleModalKeyDown', technique: 'Accessibility',
-        buggyCode: `if (e.key === 'Escape') {
-  setQuickViewProduct(null);
-  return; // focus is never returned to the trigger button
-}`,
-        fixedCode: `if (e.key === 'Escape') {
-  setQuickViewProduct(null);
-  triggerButtonRef.current?.focus();
-  return;
-}`,
-        explanation: 'Closing the modal (via Escape or the X button) never restores focus to whatever opened it, disorienting keyboard and screen-reader users.',
-      },
-      {
-        bugId: 'PDP-08', title: 'Product images have empty or missing alt attributes',
-        location: 'ProductDetail.tsx — product & related images', technique: 'Accessibility',
-        buggyCode: `<img src={product.images[0]} alt="" ... />
-<img src={rp.images[0]} ... />  {/* no alt at all */}`,
-        fixedCode: `<img src={product.images[0]} alt={product.name} ... />
-<img src={rp.images[0]} alt={rp.name} ... />`,
-        explanation: 'Screen-reader users get no description of either the main product image or the related-product thumbnails.',
-      },
-      {
-        bugId: 'PDP-09', title: '"Out of Stock" badge fails WCAG AA contrast',
-        location: 'ProductDetail.tsx — out-of-stock badge', technique: 'Accessibility (Contrast)',
-        buggyCode: `style={{ color: '#c8c8c8', background: '#e0e0e0' }}`,
-        fixedCode: `style={{ color: '#5c5c5c', background: '#e0e0e0' }} // ~4.6:1 contrast ratio`,
-        explanation: 'Light gray text on a near-identical light gray background produces a contrast ratio well under the 4.5:1 WCAG AA minimum for body text.',
-      },
-      {
-        bugId: 'PDP-10', title: 'Product title overflows on mobile Safari',
-        location: 'ProductDetail.tsx — product title', technique: 'Responsive Design',
-        buggyCode: `<h1 style={{ fontSize: '2.5rem', width: '400px' }}>{product.name}</h1>`,
-        fixedCode: `<h1 style={{ fontSize: '2.5rem', maxWidth: '100%' }}>{product.name}</h1>`,
-        explanation: 'A hardcoded 400px width forces horizontal overflow on any viewport narrower than that, e.g. an iPhone SE at 375px.',
-      },
-    ]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['PDP-02', 'PDP-03', 'PDP-08', 'PDP-09', 'PDP-10'] });
 
     if (id) {
       MockAPI.getProductById(id)

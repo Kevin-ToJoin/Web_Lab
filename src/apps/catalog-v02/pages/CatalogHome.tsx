@@ -12,7 +12,7 @@ const heroSlides = [
 ];
 
 export const CatalogHome = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState<Product[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -71,52 +71,7 @@ export const CatalogHome = () => {
       { method: 'GET', path: '/api/v1/promos/active', description: 'Returns currently active promotional banners.' }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'CAT-HOME-01', title: '"Shop Now" button has no navigation handler',
-        location: 'CatalogHome.tsx — hero banner button', technique: 'Missing Functionality',
-        buggyCode: `<button className="btn btn-secondary" style={{ background: '#000', border: 'none' }}>
-  Shop Now
-</button>`,
-        fixedCode:  `<button className="btn btn-secondary"
-  style={{ background: '#000', border: 'none' }}
-  onClick={() => navigate('/catalog/category/Electronics')}>
-  Shop Now
-</button>`,
-        explanation: 'The "Shop Now" button has no onClick handler. Clicking it does nothing. It should navigate to the sale category.',
-      },
-      {
-        bugId: 'CAT-HOME-04', title: 'Carousel interval and DOM nodes are never cleaned up',
-        location: 'CatalogHome.tsx — carousel useEffect', technique: 'Memory Leak',
-        buggyCode: `useEffect(() => {
-  const interval = setInterval(() => { ...; document.body.appendChild(ghost); }, 1500);
-  void interval; // no cleanup!
-}, []);`,
-        fixedCode: `useEffect(() => {
-  const interval = setInterval(() => setCurrentSlide(p => (p + 1) % heroSlides.length), 5000);
-  return () => clearInterval(interval);
-}, []);`,
-        explanation: 'The effect never returns a cleanup function, so the interval keeps running (and appending hidden DOM nodes) after the component unmounts.',
-      },
-      {
-        bugId: 'CAT-HOME-05', title: 'Scroll-to-top button re-queries the DOM on every scroll event',
-        location: 'CatalogHome.tsx — scroll useEffect', technique: 'Performance',
-        buggyCode: `const handleScroll = () => {
-  const btn = document.getElementById('scroll-top-btn'); // queried on EVERY scroll tick
-  ...
-};`,
-        fixedCode: `const btnRef = useRef<HTMLButtonElement>(null);
-const handleScroll = () => { /* use btnRef.current, cached once */ };`,
-        explanation: 'getElementById runs on every single scroll event instead of caching the ref once, adding unnecessary DOM query overhead during scrolling.',
-      },
-      {
-        bugId: 'CAT-HOME-08', title: 'Product description contains "Lorem ipsum" placeholder text',
-        location: 'mockDatabase.ts — PROD-001 description', technique: 'Content Bug',
-        buggyCode: `description: 'Stunning 4K resolution with smart capabilities. Lorem ipsum dolor sit amet.',`,
-        fixedCode: `description: 'Stunning 4K resolution with smart capabilities and immersive AI-enhanced audio.',`,
-        explanation: 'Leftover placeholder copy shipped to production is a classic content-QA catch — read every description, not just the UI chrome.',
-      },
-    ]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['CAT-HOME-01', 'CAT-HOME-04', 'CAT-HOME-05', 'CAT-HOME-08'] });
 
     // Fetch data
     // eslint-disable-next-line react-hooks/set-state-in-effect

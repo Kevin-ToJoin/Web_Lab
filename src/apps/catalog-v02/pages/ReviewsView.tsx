@@ -8,7 +8,7 @@ import { ArrowLeft, Star } from 'lucide-react';
 export const ReviewsView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,15 +55,7 @@ export const ReviewsView = () => {
       }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'CAT-06', title: 'PROD-002 displays reviews belonging to PROD-001',
-        location: 'MockAPI.ts — getProductById', technique: 'Data Integrity',
-        buggyCode: `if (id === 'PROD-002') {\n  product.reviews = database.products.find(p => p.id === 'PROD-001').reviews;\n}`,
-        fixedCode: `// Return the product's own reviews; remove the PROD-001 substitution.`,
-        explanation: 'getProductById swaps in PROD-001\'s reviews when fetching PROD-002, so the wrong reviews are shown. Open PROD-002 and compare against the DB viewer.',
-      },
-    ]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['CAT-06'] });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     if (id) {
@@ -72,7 +64,7 @@ export const ReviewsView = () => {
         setLoading(false);
       }).catch(() => setLoading(false));
     }
-  }, [id, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [id, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   if (loading) return <div className="container">Loading reviews...</div>;
   if (!product) return <div className="container">Product Not Found</div>;

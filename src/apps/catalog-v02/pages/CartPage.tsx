@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 export const CartPage = () => {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, totalItems, subtotal, discount, tax, total, applyPromo } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const [promoCode, setPromoCode] = useState('');
   const [checkoutStatus, setCheckoutStatus] = useState('');
 
@@ -93,62 +93,8 @@ Total    = Subtotal - Discount + Tax
       { method: 'DELETE', path: '/api/v1/cart/{itemId}', description: 'Removes a specific item from the cart by its product ID.' }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'CART-01', title: 'Quantity can be reduced below 1',
-        location: 'CartContext.tsx', technique: 'Boundary Value',
-        buggyCode: `updateQuantity: (id, qty) => {
-  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
-}`,
-        fixedCode: `updateQuantity: (id, qty) => {
-  if (qty < 1) return;
-  setItems(items.map(i => i.id === id ? { ...i, quantity: qty } : i));
-}`,
-        explanation: 'No lower-bound guard on quantity allows 0 or negative values, corrupting the cart total.',
-      },
-      {
-        bugId: 'CART-03', title: 'Remove always deletes first item, not the selected one',
-        location: 'CartContext.tsx', technique: 'Data Integrity',
-        buggyCode: `removeFromCart: (id) => setItems(items.filter((_, idx) => idx !== 0))`,
-        fixedCode: `removeFromCart: (id) => setItems(items.filter(i => i.id !== id))`,
-        explanation: 'The filter ignores the id parameter and always removes index 0, the first item in the list.',
-      },
-      {
-        bugId: 'CART-04', title: 'Promo regex accepts any code ending in "20"',
-        location: 'CartContext.tsx', technique: 'Regex',
-        buggyCode: `if (/20$/.test(code)) applyDiscount(0.20)`,
-        fixedCode: `const VALID: Record<string, number> = { 'SAVE20': 0.20, 'FALL10': 0.10 };
-if (VALID[code]) applyDiscount(VALID[code]);`,
-        explanation: 'The regex /20$/ matches any string ending with "20" (e.g., HACK20), bypassing the approved-codes list.',
-      },
-      {
-        bugId: 'CART-05', title: 'Tax applied before discount instead of after',
-        location: 'CartContext.tsx', technique: 'Logic Error',
-        buggyCode: `tax = subtotal * 0.08`,
-        fixedCode: `tax = (subtotal - discount) * 0.08`,
-        explanation: 'Tax must be computed on the post-discount amount. Applying it to the gross subtotal overcharges the customer.',
-      },
-      {
-        bugId: 'CART-06', title: 'isAdmin in localStorage grants 100% discount',
-        location: 'CartContext.tsx', technique: 'Security',
-        buggyCode: `if (localStorage.getItem('isAdmin') === 'true') setDiscount(subtotal)`,
-        fixedCode: `// Remove localStorage check — never trust client-side privilege flags`,
-        explanation: 'Any user can open DevTools and set isAdmin=true to zero out the cart total. Privilege checks must be server-side only.',
-      },
-      {
-        bugId: 'CART-16', title: 'Invalid promo codes fail silently',
-        location: 'CartContext.tsx — applyPromo', technique: 'Missing Functionality',
-        buggyCode: `const applyPromo = (code: string) => {
-  if (code.match(/.*20$/)) { ... }
-  else if (code === 'FALL10') { ... }
-  else if (code === 'FLAT50') { ... }
-  // no else branch — invalid codes do nothing, no feedback
-};`,
-        fixedCode: `else { setPromoError('That code is not valid.'); }`,
-        explanation: 'There is no fallback branch for an unrecognized code, so the user gets zero feedback that their entry was rejected.',
-      },
-    ]);
-  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['CART-01', 'CART-03', 'CART-04', 'CART-05', 'CART-06', 'CART-16'] });
+  }, [items, total, promoCode, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleCheckout = () => {
     // Level 10 BUG: Float precision strict equality.

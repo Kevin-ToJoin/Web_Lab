@@ -4,7 +4,7 @@ import { useQAPanel } from '../context/QAPanelContext';
 
 export const OrderConfirmation = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## Order Confirmation
@@ -56,17 +56,8 @@ export const OrderConfirmation = () => {
       }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'ORD-01', title: 'Order ID is always hardcoded as ORD-9999',
-        location: 'OrderConfirmation.tsx', technique: 'Data Integrity',
-        buggyCode: `<p>Your simulated order ID is: <strong>ORD-9999</strong></p>`,
-        fixedCode: `const orderId = \`ORD-\${Math.floor(1000 + Math.random() * 9000)}\`;
-<p>Your simulated order ID is: <strong>{orderId}</strong></p>`,
-        explanation: 'The order ID is a hardcoded string literal. Every order shows the same ID, making it impossible to distinguish orders.',
-      },
-    ]);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['ORD-01'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="animate-fade-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>

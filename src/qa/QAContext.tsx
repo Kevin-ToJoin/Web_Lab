@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 // A live response returned by an endpoint handler. `status` drives the
 // colour of the rendered response; `body` is pretty-printed as JSON.
@@ -32,6 +32,14 @@ export interface BugSolution {
   explanation: string;
 }
 
+// A page that keeps its answers in the protected backend (server-gated) sets
+// this instead of `setSolutions`: just which app + which bugIds are on the view.
+// The actual solution content is fetched from /api/solutions on unlock.
+export interface RemoteSolutionsRef {
+  app: string;
+  bugIds: string[];
+}
+
 interface QAPanelState {
   requirementsMarkdown: string;
   setRequirements: (md: string) => void;
@@ -42,39 +50,100 @@ interface QAPanelState {
   apiEndpoints: APIEndpoint[];
   setApiEndpoints: (endpoints: APIEndpoint[]) => void;
 
+  // Inline solutions: content shipped in the client bundle (legacy path, still
+  // used by modules whose answers have not been moved server-side yet).
   solutions: BugSolution[];
   setSolutions: (solutions: BugSolution[]) => void;
 
+  // Server-gated solutions: the page registers only bugIds; content is fetched.
+  remoteSolutions: RemoteSolutionsRef | null;
+  setRemoteSolutions: (ref: RemoteSolutionsRef | null) => void;
+
   solutionsUnlocked: boolean;
-  unlockSolutions: (password: string) => boolean;
+  solutionsLoading: boolean;
+  solutionsError: string | null;
+  // Async: for inline modules it resolves the client-side check; for server-gated
+  // modules it validates the key on the server and fetches the answers.
+  unlockSolutions: (password: string) => Promise<boolean>;
 }
 
 const QAPanelContext = createContext<QAPanelState | undefined>(undefined);
 
 const SOLUTIONS_PASSWORD = 'REVEAL';
+// Root-relative on purpose: the app is served under /Lab101/ but the serverless
+// function lives at the origin root (/api/*), outside the SPA rewrite.
+const SOLUTIONS_ENDPOINT = '/api/solutions';
 
 export const QAProvider = ({ children }: { children: ReactNode }) => {
   const [requirementsMarkdown, setRequirements] = useState<string>('## Select a page\nNavigate to any page to load its requirements.');
   const [dbTables,     setDbTables]     = useState<Record<string, any[]>>({});
   const [apiEndpoints, setApiEndpoints] = useState<APIEndpoint[]>([]);
   const [solutions,    setSolutions]    = useState<BugSolution[]>([]);
+  const [remoteSolutions, setRemoteSolutions] = useState<RemoteSolutionsRef | null>(null);
   const [solutionsUnlocked, setSolutionsUnlocked] = useState(false);
+  const [solutionsLoading, setSolutionsLoading] = useState(false);
+  const [solutionsError, setSolutionsError] = useState<string | null>(null);
+  // Full answer map for the current server-gated app, keyed by bugId (so the
+  // stored values carry no bugId of their own). Kept only after a successful
+  // unlock. Never persisted; lost on reload (a fresh unlock re-fetches).
+  const [fetchedAnswers, setFetchedAnswers] = useState<Record<string, Omit<BugSolution, 'bugId'>> | null>(null);
 
-  const unlockSolutions = (password: string): boolean => {
-    if (password.trim().toUpperCase() === SOLUTIONS_PASSWORD) {
+  const unlockSolutions = useCallback(async (password: string): Promise<boolean> => {
+    const key = password.trim();
+
+    // Server-gated path: let the backend validate the key and hand back answers.
+    if (remoteSolutions) {
+      setSolutionsError(null);
+      setSolutionsLoading(true);
+      try {
+        const res = await fetch(SOLUTIONS_ENDPOINT, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ app: remoteSolutions.app, key }),
+        });
+        if (res.status === 401) return false; // wrong key
+        if (!res.ok) {
+          setSolutionsError(`Answers service returned ${res.status}. Is it configured?`);
+          return false;
+        }
+        const data = await res.json();
+        setFetchedAnswers((data?.answers ?? {}) as Record<string, Omit<BugSolution, 'bugId'>>);
+        setSolutionsUnlocked(true);
+        return true;
+      } catch {
+        setSolutionsError('Could not reach the answers service (no /api in this environment).');
+        return false;
+      } finally {
+        setSolutionsLoading(false);
+      }
+    }
+
+    // Inline path (legacy modules): client-side check against the shared code.
+    if (key.toUpperCase() === SOLUTIONS_PASSWORD) {
       setSolutionsUnlocked(true);
       return true;
     }
     return false;
-  };
+  }, [remoteSolutions]);
+
+  // For server-gated views, resolve the current page's bugIds against the
+  // fetched answer map; otherwise fall back to the inline solutions.
+  const resolvedSolutions: BugSolution[] = remoteSolutions
+    ? (fetchedAnswers
+        ? remoteSolutions.bugIds
+            .map(id => (fetchedAnswers[id] ? { bugId: id, ...fetchedAnswers[id] } : null))
+            .filter((s): s is BugSolution => s !== null)
+        : [])
+    : solutions;
 
   return (
     <QAPanelContext.Provider value={{
       requirementsMarkdown, setRequirements,
       dbTables, setDbTables,
       apiEndpoints, setApiEndpoints,
-      solutions, setSolutions,
-      solutionsUnlocked, unlockSolutions,
+      solutions: resolvedSolutions, setSolutions,
+      remoteSolutions, setRemoteSolutions,
+      solutionsUnlocked, solutionsLoading, solutionsError, unlockSolutions,
     }}>
       {children}
     </QAPanelContext.Provider>

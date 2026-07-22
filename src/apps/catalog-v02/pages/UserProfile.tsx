@@ -5,7 +5,7 @@ import { ArrowLeft, User, Package, Settings } from 'lucide-react';
 
 export const UserProfile = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## User Profile
@@ -79,17 +79,8 @@ The API must never expose \`passwordHash\`, raw \`isAdmin\` flags, or internal u
       { method: 'GET', path: '/api/v1/users/me/orders', description: 'Returns past orders. Should be called when the Orders tab is clicked.' }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'USER-01', title: 'API exposes passwordHash to frontend',
-        location: 'mockDatabase.ts / API response', technique: 'Security',
-        buggyCode: `// GET /api/v1/users/me returns full user row including passwordHash`,
-        fixedCode: `const { passwordHash, isAdmin, ...safeUser } = user;
-return safeUser; // only id, name, email`,
-        explanation: 'The user endpoint returns the full database row, including the password hash. Sensitive fields must be stripped server-side before sending the response.',
-      },
-    ]);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['USER-01'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>

@@ -6,7 +6,7 @@ import { useCart } from '../context/CartContext';
 export const CheckoutPayment = () => {
   const navigate = useNavigate();
   const { total } = useCart();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   
   const [card, setCard] = useState('');
 
@@ -68,31 +68,8 @@ CVC:    exactly 3 digits       (e.g. 123 ✓, abc ✗)
       }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'PAY-01', title: 'Card number not Luhn-validated',
-        location: 'CheckoutPayment.tsx', technique: 'Equivalence Partitioning',
-        buggyCode: `// no card validation before calling handlePay`,
-        fixedCode: `function luhn(n: string) {
-  return [...n].reverse().reduce((s,d,i) => {
-    let v = +d; if (i%2) { v*=2; if(v>9) v-=9; } return s+v;
-  }, 0) % 10 === 0;
-}
-if (!luhn(card.replace(/\\s/g,''))) { setError('Invalid card'); return; }`,
-        explanation: 'Any 16-character string passes as a valid card. The Luhn algorithm check is missing entirely.',
-      },
-      {
-        bugId: 'PAY-03', title: 'Double-submit race condition on Authorize button',
-        location: 'CheckoutPayment.tsx', technique: 'Race Condition',
-        buggyCode: `<button onClick={handlePay}>Authorize Payment</button>`,
-        fixedCode: `const [loading, setLoading] = useState(false);
-<button disabled={loading} onClick={async () => { setLoading(true); await handlePay(); }}>
-  {loading ? 'Processing...' : 'Authorize Payment'}
-</button>`,
-        explanation: 'The button stays enabled during processing. Rapid double-click sends two charge requests to the payment API.',
-      },
-    ]);
-  }, [total, card, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['PAY-01', 'PAY-03'] });
+  }, [total, card, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handlePay = () => {
     // BUG: Race condition / Double submission
