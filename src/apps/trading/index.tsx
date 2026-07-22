@@ -9,7 +9,15 @@ import { History } from './pages/History';
 
 export const TradingApp = () => (
   <TradingProvider>
-    <QALayout>
+    <QALayout
+      showDataTabs={false}
+      dockerLab={{
+        name: 'Trading Desk API',
+        port: 4005,
+        bugCount: 12,
+        composeUrl: `${import.meta.env.BASE_URL}labs/trading-docker-compose.yml`,
+      }}
+    >
       <Routes>
         <Route path="/" element={<Trade />} />
         <Route path="watchlist" element={<Watchlist />} />

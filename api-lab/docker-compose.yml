@@ -119,3 +119,15 @@ services:
       - "4004:4004"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Trading module (Trading Desk): orders, positions, money/concurrency ──
+  trading-api:
+    build: ./services/trading
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4005"
+      DATABASE_URL: postgres://lab:lab@db:5432/trading
+    ports:
+      - "4005:4005"
+    depends_on:
+      db: { condition: service_healthy }

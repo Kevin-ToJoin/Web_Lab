@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { ListOrdered, X } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useTrading } from '../context/TradingContext';
 import { TradingChrome } from './TradingChrome';
 
 export const Orders = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { pendingOrders, cancelPendingOrder, prices } = useTrading();
 
   useEffect(() => {
@@ -29,38 +29,8 @@ URL: \`/trading/orders\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'TRD-15', title: 'Queued limit orders never actually fill',
-        location: 'TradingContext.tsx — pendingOrders / price tick effect', technique: 'Missing Functionality',
-        buggyCode: '// pendingOrders is populated on limit miss, but the price-tick interval\n// never re-checks pendingOrders against the new live price',
-        fixedCode: 'useEffect(() => {\n  pendingOrders.forEach(o => {\n    if (prices[o.symbol] <= o.limitPrice) fillOrder(o);\n  });\n}, [prices]);',
-        explanation: 'The status message implies the order is "working," but nothing ever revisits pendingOrders as prices move — it just sits here forever, unfillable.',
-      },
-      {
-        bugId: 'TRD-16', title: 'Cancelling an order never reserved buying power to release',
-        location: 'TradingContext.tsx — cancelPendingOrder()', technique: 'Logic Error',
-        buggyCode: 'const cancelPendingOrder = (id) => setPendingOrders(prev => prev.filter(o => o.id !== id));\n// cash was never debited/reserved when the order was placed',
-        fixedCode: '// Reserve (debit) funds when a limit order is queued, then release\n// (credit back) the reservation on cancel — buying power should reflect open orders.',
-        explanation: 'Since queued orders never reserved funds in the first place, a customer could place far more in open orders than their actual buying power — the "Orders" total is disconnected from "Buying Power."',
-      },
-      {
-        bugId: 'TRD-22', title: 'Order age is never shown',
-        location: 'Orders.tsx — order row', technique: 'Missing Functionality',
-        buggyCode: '<td>{o.symbol}</td><td>{o.shares}</td><td>${o.limitPrice}</td>\n{/* createdAt exists but is never rendered or diffed against now */}',
-        fixedCode: '<td>{formatRelativeTime(o.createdAt)}</td> // "queued 4m ago"',
-        explanation: 'createdAt is stored on every order (see the DB viewer) but never surfaced — a trader has no idea how stale a queued order is.',
-      },
-      {
-        bugId: 'TRD-23', title: 'No link from Trade to Orders when a limit order queues',
-        location: 'Trade.tsx / TradingContext.tsx — limit-miss status message', technique: 'Missing Functionality',
-        buggyCode: 'setStatus(`Limit not reached: ... Order queued (won\'t actually fill — see Orders page).`);\n// plain text, not a link/navigation',
-        fixedCode: '<Link to="/trading/orders">View queued orders</Link> instead of plain status text.',
-        explanation: 'The status message tells the trader to "see Orders page" but gives no clickable way to get there.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [pendingOrders, prices, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'trading', bugIds: ['TRD-15', 'TRD-16', 'TRD-22', 'TRD-23'] });
+  }, [pendingOrders, prices, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <TradingChrome>

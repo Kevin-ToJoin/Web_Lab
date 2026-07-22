@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { Clock } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useTrading } from '../context/TradingContext';
 import { TradingChrome } from './TradingChrome';
 
 export const History = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { history } = useTrading();
 
   useEffect(() => {
@@ -31,31 +31,8 @@ URL: \`/trading/history\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'TRD-03', title: 'Transaction history sorts wrong (non-padded local string)', location: 'TradingContext.tsx — recordTrade()',
-        technique: 'Timezone',
-        buggyCode: "const localStamp = `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} ${d.getHours()}:...`;\nsort((a,b) => b.time.localeCompare(a.time));",
-        fixedCode: 'const ts = Date.now(); // store epoch ms\nsort((a, b) => b.ts - a.ts);',
-        explanation: 'A non-padded local string ("9:5:2" vs "10:12:0") sorted lexically misorders rows — "10" sorts before "9". Store UTC epoch and sort numerically.',
-      },
-      {
-        bugId: 'TRD-13', title: 'History sorts wrong across a DST boundary', location: 'TradingContext.tsx — recordTrade()',
-        technique: 'Timezone',
-        buggyCode: 'time: local wall-clock string; sort by localeCompare',
-        fixedCode: 'Store UTC epoch ms (Date.now()) and sort numerically; render with a fixed timeZone.',
-        explanation: 'Local-time strings repeat/shift an hour at DST changes, breaking chronological order across that boundary.',
-      },
-      {
-        bugId: 'TRD-27', title: 'No way to export transaction history',
-        location: 'History.tsx — page body', technique: 'Missing Functionality',
-        buggyCode: '<table>{history.map(...)}</table> // no export/download control anywhere',
-        fixedCode: '<button onClick={() => downloadCsv(history)}>Export CSV</button>',
-        explanation: 'A trading platform\'s history is needed for tax/audit purposes, but there is no way to get it out of the browser.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [history, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'trading', bugIds: ['TRD-03', 'TRD-13', 'TRD-27'] });
+  }, [history, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <TradingChrome>

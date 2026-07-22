@@ -1,0 +1,82 @@
+{
+  "info": {
+    "name": "TestLab 101 — Trading Desk (Trading module)",
+    "description": "A deliberately-buggy trading backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4005" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Instruments — list", "request": { "method": "GET", "url": "{{baseUrl}}/instruments" } },
+
+    {
+      "name": "Order — buy beyond buying power, cash goes negative (TRAD-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 2,\n  \"symbol\": \"AAPL\",\n  \"side\": \"buy\",\n  \"quantity\": 1000\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — sell more than held, position goes negative (TRAD-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 1,\n  \"symbol\": \"AAPL\",\n  \"side\": \"sell\",\n  \"quantity\": 9999\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — negative quantity accepted (TRAD-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 1,\n  \"symbol\": \"AAPL\",\n  \"side\": \"buy\",\n  \"quantity\": -5\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — market fill at a client-set price (TRAD-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 1,\n  \"symbol\": \"AAPL\",\n  \"side\": \"buy\",\n  \"quantity\": 1,\n  \"price\": 0.01\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — weighted-cost-basis corruption (buy at new price) (TRAD-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 1,\n  \"symbol\": \"AAPL\",\n  \"side\": \"buy\",\n  \"quantity\": 10\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — duplicate client_order_id, run twice (TRAD-08)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"account_id\": 1,\n  \"symbol\": \"BOND\",\n  \"side\": \"buy\",\n  \"quantity\": 1,\n  \"client_order_id\": \"my-order-1\"\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — malformed JSON → 500 html (TRAD-11)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"account_id\": 1, " },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    { "name": "Order — 'today' timezone drift (TRAD-09)", "request": { "method": "GET", "url": "{{baseUrl}}/orders/today" } },
+    { "name": "Order — missing id returns 200 null (TRAD-10)", "request": { "method": "GET", "url": "{{baseUrl}}/orders/999999" } },
+    { "name": "Portfolio — float drift + wrong P&L (TRAD-03 / TRAD-07)", "request": { "method": "GET", "url": "{{baseUrl}}/accounts/1/portfolio" } },
+    { "name": "Admin — no authz, whole order book (TRAD-12)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/orders" } }
+  ]
+}
