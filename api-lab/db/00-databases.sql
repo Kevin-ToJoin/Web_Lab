@@ -5,3 +5,4 @@ CREATE DATABASE ecommerce;
 CREATE DATABASE bank;
 CREATE DATABASE catalog;
 CREATE DATABASE registration;
+CREATE DATABASE healthcare;
