@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { PieChart } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useTrading, INITIAL_CASH } from '../context/TradingContext';
 import { TradingChrome } from './TradingChrome';
 
 export const Portfolio = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { cash, holdings, prices } = useTrading();
 
   // BUG TRD-02/TRD-10 (recap): summed as raw floats, never rounded.
@@ -48,39 +48,9 @@ URL: \`/trading/portfolio\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'TRD-06', title: 'Total gain percentage shows float drift', location: 'Portfolio.tsx — totalGainPct',
-        technique: 'Precision Error',
-        buggyCode: 'const totalGainPct = ((portfolioTotal - INITIAL_CASH) / INITIAL_CASH) * 100;',
-        fixedCode: 'const totalGainPct = Math.round(((portfolioTotal - INITIAL_CASH) / INITIAL_CASH) * 10000) / 100;',
-        explanation: 'Float division produces noisy digits (e.g. 3.259999999999998%). Round the percentage to 2 decimals.',
-      },
-      {
-        bugId: 'TRD-24', title: 'Allocation percentages never sum to 100%',
-        location: 'Portfolio.tsx — allocations', technique: 'Logic Error',
-        buggyCode: 'pct: (h.value / holdingsValue) * 100 // denominator excludes cash entirely, and cash is never shown as a slice',
-        fixedCode: 'pct: (h.value / portfolioTotal) * 100 // include cash as its own slice summing with the rest to 100',
-        explanation: 'Each holding\'s % is computed against holdingsValue (positions only) instead of portfolioTotal (positions + cash), and cash itself is never shown as a slice — the displayed percentages overstate concentration and never reconcile to 100%.',
-      },
-      {
-        bugId: 'TRD-25', title: '"Day change" is measured from page load, not market open',
-        location: 'Portfolio.tsx — (missing baseline)', technique: 'Logic Error',
-        buggyCode: '// no market-open snapshot is ever captured — any "day change" would\n// implicitly baseline off whenever the page happened to mount',
-        fixedCode: 'const openingPrices = useRef(capturePricesAtMarketOpen());\n// compute change relative to openingPrices, not mount time',
-        explanation: 'A trader who opens the dashboard mid-day would see a "day change" that only reflects movement since they loaded the page, wildly understating the real daily move.',
-      },
-      {
-        bugId: 'TRD-26', title: 'No concentration-risk warning for an oversized position',
-        location: 'Portfolio.tsx — allocations list', technique: 'Missing Functionality',
-        buggyCode: '{allocations.map(a => <AllocationRow ... />)} // no threshold check anywhere',
-        fixedCode: '{allocations.map(a => (\n  <AllocationRow warn={a.pct > 50} ... />\n))}',
-        explanation: 'A single position can grow to dominate the entire portfolio with zero visual warning, even though real brokerages flag concentration risk.',
-      },
-    ];
-    setSolutions(solutions);
+    setRemoteSolutions({ app: 'trading', bugIds: ['TRD-06', 'TRD-24', 'TRD-25', 'TRD-26'] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cash, holdings, prices, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [cash, holdings, prices, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <TradingChrome>

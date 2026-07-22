@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../../../qa/QAContext';
 import { useTrading, TRADABLE, INITIAL_CASH, MARKET_OPEN_HOUR, MARKET_CLOSE_HOUR } from '../context/TradingContext';
 import { TradingChrome } from './TradingChrome';
 
 export const Trade = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { cash, holdings, prices, status, isMarketOpen, executeBuy, executeSell } = useTrading();
 
   const [symbol, setSymbol] = useState('TECH');
@@ -103,87 +103,8 @@ Level 10 (race conditions, float precision, timezone, boundary, TOCTOU).
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'TRD-01', title: 'Double purchase on rapid Buy clicks', location: 'TradingContext.tsx — executeBuy()',
-        technique: 'Race Condition',
-        buggyCode: 'if (cost > cash) return;\nawait new Promise(r => setTimeout(r, 450));\nsetCash(cash - cost);',
-        fixedCode: 'if (submitting) return;\nsetSubmitting(true);\n// ...await, then:\nsetCash(prev => prev - cost);\nsetSubmitting(false);',
-        explanation: 'The check-then-await window lets rapid clicks each pass. Guard with an in-flight flag and use a functional state updater.',
-      },
-      {
-        bugId: 'TRD-02', title: 'Buying power shows float precision error', location: 'TradingChrome.tsx / TradingContext.tsx — cash',
-        technique: 'Precision Error',
-        buggyCode: '<div>${cash}</div> // raw float, e.g. 9849.999999999996',
-        fixedCode: '<div>${cash.toFixed(2)}</div>',
-        explanation: 'Repeated float subtraction accumulates drift and is displayed unrounded.',
-      },
-      {
-        bugId: 'TRD-04', title: 'Can oversell shares via rapid clicks', location: 'TradingContext.tsx — executeSell()',
-        technique: 'Race Condition',
-        buggyCode: 'if (!existing || existing.shares < qty) return;\nawait ...;\nsetHoldings(prev => ...);',
-        fixedCode: 'Guard with an in-flight flag and re-check shares inside the functional updater before applying.',
-        explanation: 'The shares check reads a stale closure before the await, so concurrent sells exceed the owned amount.',
-      },
-      {
-        bugId: 'TRD-05', title: 'Stale price used at moment of buy', location: 'TradingContext.tsx — priceRef / executeBuy()',
-        technique: 'Stale State',
-        buggyCode: 'setTimeout(() => { priceRef.current = prices; }, 400);\nconst execPrice = priceRef.current[symbol];',
-        fixedCode: 'const execPrice = prices[symbol]; // read the live price directly',
-        explanation: 'The delayed ref snapshot lags the live ticker, so trades fill at an out-of-date price.',
-      },
-      {
-        bugId: 'TRD-07', title: 'Order quantity accepts fractional shares', location: 'TradingContext.tsx — executeBuy()/executeSell()',
-        technique: 'Boundary Value',
-        buggyCode: 'const qty = parseFloat(quantity);',
-        fixedCode: 'const qty = parseInt(quantity, 10);\nif (!Number.isInteger(qty) || qty <= 0) { setStatus("Whole shares only"); return; }',
-        explanation: 'parseFloat allows 2.5 shares. Parse as an integer and require a positive whole number.',
-      },
-      {
-        bugId: 'TRD-08', title: 'Balance check uses a stale value (TOCTOU)', location: 'TradingContext.tsx — executeBuy()',
-        technique: 'TOCTOU',
-        buggyCode: 'if (cost > cash) return;\n// ...await...\nsetCash(cash - cost);',
-        fixedCode: 'setCash(prev => {\n  if (cost > prev) { /* reject */ return prev; }\n  return prev - cost;\n});',
-        explanation: 'The cash read at time-of-check differs from time-of-use. Validate and debit inside one functional update.',
-      },
-      {
-        bugId: 'TRD-09', title: 'Market-closed check off due to timezone', location: 'TradingContext.tsx — isMarketOpen()',
-        technique: 'Timezone',
-        buggyCode: 'const h = new Date().getHours(); // local time',
-        fixedCode: "const h = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hour12: false, timeZone: 'America/New_York' }).format(new Date()));",
-        explanation: 'getHours() uses the browser timezone; market hours must be evaluated in US Eastern.',
-      },
-      {
-        bugId: 'TRD-11', title: 'Negative sell quantity acts like a buy', location: 'TradingContext.tsx — executeSell()',
-        technique: 'Boundary Value',
-        buggyCode: 'const qty = parseFloat(quantity);\n// no qty > 0 guard before selling',
-        fixedCode: 'if (!(qty > 0)) { setStatus("Quantity must be positive"); return; }',
-        explanation: 'A negative quantity flips the math, adding shares and crediting cash. Reject non-positive quantities.',
-      },
-      {
-        bugId: 'TRD-10', title: 'Cumulative rounding error in weighted average price', location: 'TradingContext.tsx — executeBuy() avgPrice',
-        technique: 'Precision Error',
-        buggyCode: 'const newAvg = (existing.shares * existing.avgPrice + cost) / newShares;',
-        fixedCode: 'const newAvg = Math.round(((existing.shares * existing.avgPrice + cost) / newShares) * 100) / 100;',
-        explanation: 'Each unrounded addition compounds error across trades. Round the weighted average to cents.',
-      },
-      {
-        bugId: 'TRD-12', title: 'Concurrent orders exceed buying power', location: 'TradingContext.tsx — executeBuy() / POST /api/orders/buy',
-        technique: 'Race Condition',
-        buggyCode: 'const accepted = cost <= buyingPower; // no reservation\nsetCash(cash - cost);',
-        fixedCode: 'Reserve funds atomically (lock/transaction) and debit with setCash(prev => prev - cost) after re-validating.',
-        explanation: 'Two orders validated against the same starting balance both pass and together overspend.',
-      },
-      {
-        bugId: 'TRD-14', title: 'Limit order triggers at wrong price (off-by-epsilon)', location: 'TradingContext.tsx — executeBuy() limit check',
-        technique: 'Precision Error',
-        buggyCode: 'if (livePrice > lp) { /* not reached */ }',
-        fixedCode: 'const EPS = 1e-6;\nif (livePrice - lp > EPS) { /* not reached */ }',
-        explanation: 'A raw float compare mis-fires when price and limit differ by a floating-point epsilon. Compare with a tolerance.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [holdings, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'trading', bugIds: ['TRD-01', 'TRD-02', 'TRD-04', 'TRD-05', 'TRD-07', 'TRD-08', 'TRD-09', 'TRD-11', 'TRD-10', 'TRD-12', 'TRD-14'] });
+  }, [holdings, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <TradingChrome>

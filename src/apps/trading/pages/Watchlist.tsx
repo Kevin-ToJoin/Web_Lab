@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Star, Trash2 } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useTrading, TRADABLE } from '../context/TradingContext';
 import { TradingChrome } from './TradingChrome';
 
 export const Watchlist = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { watchlist, addToWatchlist, removeFromWatchlist, prices } = useTrading();
 
   const [symbol, setSymbol] = useState('TECH');
@@ -33,45 +33,8 @@ URL: \`/trading/watchlist\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'TRD-17', title: 'Watchlist alerts never fire',
-        location: 'TradingContext.tsx — watchlist / price tick effect', technique: 'Missing Functionality',
-        buggyCode: 'const [watchlist, setWatchlist] = useState([{ symbol: "AERO", alertAbove: 95 }]);\n// the price-tick interval never compares live prices against alertAbove',
-        fixedCode: 'useEffect(() => {\n  watchlist.forEach(w => {\n    if (w.alertAbove && prices[w.symbol] > w.alertAbove) notify(w.symbol);\n  });\n}, [prices]);',
-        explanation: 'AERO is seeded with an "alert above $95" threshold, but nothing in the app ever checks live prices against it — the alert is purely decorative data.',
-      },
-      {
-        bugId: 'TRD-18', title: 'The same symbol can be watchlisted twice',
-        location: 'TradingContext.tsx — addToWatchlist()', technique: 'Missing Validation',
-        buggyCode: 'setWatchlist(prev => [...prev, { symbol, alertAbove }]); // no duplicate check',
-        fixedCode: 'if (watchlist.some(w => w.symbol === symbol)) { setError("Already watching " + symbol); return; }',
-        explanation: 'Adding AERO a second time creates a duplicate row instead of updating or rejecting.',
-      },
-      {
-        bugId: 'TRD-19', title: 'Alert threshold is not displayed as readable text',
-        location: 'Watchlist.tsx — watchlist row', technique: 'Accessibility',
-        buggyCode: '<span>{w.symbol}</span> // alertAbove value never rendered',
-        fixedCode: '<span>{w.symbol} {w.alertAbove ? `— alert above $${w.alertAbove}` : ""}</span>',
-        explanation: 'The alert value exists in state and the DB viewer, but the row itself never tells the user what threshold they set.',
-      },
-      {
-        bugId: 'TRD-20', title: 'Watchlist is lost on page refresh',
-        location: 'TradingContext.tsx — watchlist state', technique: 'Stale State / Persistence',
-        buggyCode: 'const [watchlist, setWatchlist] = useState([...]); // memory only, no persistence',
-        fixedCode: 'Persist to localStorage on change and rehydrate on mount.',
-        explanation: 'The watchlist lives only in React state — a refresh silently resets it to the seeded AERO entry.',
-      },
-      {
-        bugId: 'TRD-21', title: 'Removing a watchlist item has no confirmation',
-        location: 'Watchlist.tsx — remove button', technique: 'UX / Destructive Action',
-        buggyCode: '<button onClick={() => removeFromWatchlist(w.symbol)}><Trash2 /></button>',
-        fixedCode: 'if (confirm(`Remove ${w.symbol} from watchlist?`)) removeFromWatchlist(w.symbol);',
-        explanation: 'One accidental click permanently removes a watched symbol with no confirmation or undo.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [watchlist, prices, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'trading', bugIds: ['TRD-17', 'TRD-18', 'TRD-19', 'TRD-20', 'TRD-21'] });
+  }, [watchlist, prices, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleAdd = () => {
     addToWatchlist(symbol, alertAbove ? parseFloat(alertAbove) : null);
