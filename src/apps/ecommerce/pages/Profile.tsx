@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 
 export const Profile = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { savedAddress, savedEmail, saveProfile } = useCart();
   const [address, setAddress] = useState(savedAddress);
   const [email, setEmail] = useState(savedEmail);
@@ -42,60 +42,8 @@ export const Profile = () => {
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-39', title: 'Email/Address labels are not associated with their inputs',
-        location: 'Profile.tsx — form fields', technique: 'Accessibility',
-        buggyCode: `<label className="input-label">Email</label>\n<input value={email} onChange={...} />`,
-        fixedCode: `<label htmlFor="profileEmail">Email</label>\n<input id="profileEmail" value={email} onChange={...} />`,
-        explanation: 'Without a matching htmlFor/id pair, clicking the label doesn\'t focus the input and screen readers can\'t announce the field name.',
-      },
-      {
-        bugId: 'ECO-40', title: 'Email is saved with no format validation',
-        location: 'Profile.tsx — handleSave', technique: 'Equivalence Partitioning',
-        buggyCode: `const handleSave = () => { saveProfile(address, email); }; // no format check`,
-        fixedCode: `if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) return setError('Invalid email.');`,
-        explanation: 'Any string, including "nope", is accepted and persisted as the saved email.',
-      },
-      {
-        bugId: 'ECO-41', title: 'No link to Profile from the Storefront or header',
-        location: 'Storefront.tsx / header', technique: 'Missing Functionality',
-        buggyCode: `{/* header only has a cart icon — no profile/account link anywhere */}`,
-        fixedCode: `<button onClick={() => navigate('/ecommerce/profile')}>My Profile</button>`,
-        explanation: 'The route works, but a customer has no discoverable way to reach it from normal navigation.',
-      },
-      {
-        bugId: 'ECO-42', title: 'Saved address doesn\'t flow into Checkout',
-        location: 'Checkout.tsx — initial state', technique: 'Missing Functionality',
-        buggyCode: `const [address, setAddress] = useState(''); // ignores savedAddress`,
-        fixedCode: `const [address, setAddress] = useState(savedAddress);`,
-        explanation: 'Saving a profile address here has no visible effect anywhere else in the app — see the matching Checkout bug (ECO-30).',
-      },
-      {
-        bugId: 'ECO-63', title: 'Address field has no maximum length',
-        location: 'Profile.tsx — address textarea', technique: 'Boundary Value',
-        buggyCode: `<textarea value={address} onChange={...} /> // no maxLength`,
-        fixedCode: `<textarea maxLength={200} value={address} onChange={...} />`,
-        explanation: 'There is no upper bound on the saved address length.',
-      },
-      {
-        bugId: 'ECO-64', title: '"Profile saved" message never clears on further edits',
-        location: 'Profile.tsx — saved state', technique: 'Stale State',
-        buggyCode: `const [saved, setSaved] = useState(false);
-// setSaved(false) is never called when address/email change again`,
-        fixedCode: `const handleChange = (setter) => (e) => { setter(e.target.value); setSaved(false); };`,
-        explanation: 'After saving once, further unsaved edits still show the old "Profile saved." success message, misleading the user about their current state.',
-      },
-      {
-        bugId: 'ECO-65', title: 'No link from Profile to Order History',
-        location: 'Profile.tsx — page layout', technique: 'Missing Functionality',
-        buggyCode: `{/* only a "Back to Store" button — no cross-link to Order History */}`,
-        fixedCode: `<button onClick={() => navigate('/ecommerce/orders')}>View Order History</button>`,
-        explanation: 'Both pages are account-related, but there\'s no way to move between them without going back through the storefront.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [address, email, savedAddress, savedEmail, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-39', 'ECO-40', 'ECO-41', 'ECO-42', 'ECO-63', 'ECO-64', 'ECO-65'] });
+  }, [address, email, savedAddress, savedEmail, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleSave = () => {
     saveProfile(address, email);

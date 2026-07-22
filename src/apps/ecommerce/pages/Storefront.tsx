@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { ArrowLeft, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/mockStore';
 
 export const Storefront = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { cart, badgeCount, addToCart, updateQuantity, setQuantityRaw } = useCart();
 
   useEffect(() => {
@@ -60,66 +60,8 @@ export const Storefront = () => {
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-01', title: 'Cart quantity can go negative', location: 'CartContext.tsx — updateQuantity()',
-        technique: 'Boundary Value',
-        buggyCode: 'return { ...item, quantity: item.quantity + delta };',
-        fixedCode: 'return { ...item, quantity: Math.max(0, item.quantity + delta) };',
-        explanation: 'Decrementing below zero is unguarded. Clamp the lower bound to 0.',
-      },
-      {
-        bugId: 'ECO-05', title: 'Quantity exceeds available stock', location: 'CartContext.tsx — updateQuantity()',
-        technique: 'Boundary Value',
-        buggyCode: 'quantity: item.quantity + delta',
-        fixedCode: 'quantity: Math.min(product.stock, Math.max(0, item.quantity + delta))',
-        explanation: 'No upper bound lets the cart hold more units than exist. Clamp to the product\'s stock.',
-      },
-      {
-        bugId: 'ECO-07', title: 'Header cart badge goes stale', location: 'CartContext.tsx — badgeCount state',
-        technique: 'Stale State',
-        buggyCode: 'const [badgeCount, setBadgeCount] = useState(0); // only +qty on add',
-        fixedCode: 'const badgeCount = cart.reduce((a, i) => a + i.quantity, 0); // derived',
-        explanation: 'A separately tracked count desyncs on +/-/remove. Derive it from cart instead.',
-      },
-      {
-        bugId: 'ECO-08', title: 'Tax shown inconsistently', location: 'Storefront.tsx price vs Cart.tsx total',
-        technique: 'Equivalence Partitioning',
-        buggyCode: 'list: ${price.toFixed(2)}   // no tax\ncart total: subtotal + tax',
-        fixedCode: 'Show price including tax in both places (or exclude tax in both consistently).',
-        explanation: 'The storefront omits tax while the cart total includes it, confusing the displayed price.',
-      },
-      {
-        bugId: 'ECO-09', title: 'Quantity accepts decimals', location: 'CartContext.tsx — setQuantityRaw()',
-        technique: 'Boundary Value',
-        buggyCode: 'const num = parseFloat(value);',
-        fixedCode: 'const num = parseInt(value, 10);',
-        explanation: 'parseFloat permits 1.5 units. Use parseInt to enforce whole quantities.',
-      },
-      {
-        bugId: 'ECO-12', title: 'Out-of-stock item addable', location: 'CartContext.tsx — addToCart()',
-        technique: 'Logic Error',
-        buggyCode: 'const addToCart = (id) => { updateQuantity(id, 1); };',
-        fixedCode: 'const p = PRODUCTS.find(p => p.id === id);\nif (!p || p.stock <= 0) return;\nupdateQuantity(id, 1);',
-        explanation: 'Items with stock 0 (Pour-over Coffee Maker) can still be added. Guard on stock.',
-      },
-      {
-        bugId: 'ECO-17', title: 'Product cards are not keyboard-accessible',
-        location: 'Storefront.tsx — product list', technique: 'Accessibility',
-        buggyCode: '<h3 onClick={() => navigate(`/ecommerce/product/${p.id}`)}>{p.name}</h3>',
-        fixedCode: '<Link to={`/ecommerce/product/${p.id}`}>{p.name}</Link>',
-        explanation: 'A clickable heading with no tabIndex/role is invisible to keyboard navigation — use a real link.',
-      },
-      {
-        bugId: 'ECO-18', title: '+/- quantity buttons have no accessible label',
-        location: 'Storefront.tsx — quantity controls', technique: 'Accessibility',
-        buggyCode: '<button onClick={() => updateQuantity(p.id, -1)}>-</button>',
-        fixedCode: '<button aria-label={`Decrease quantity of ${p.name}`} onClick={() => updateQuantity(p.id, -1)}>-</button>',
-        explanation: 'A lone "-" or "+" character means nothing to a screen reader without context about which product it affects.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-01', 'ECO-05', 'ECO-07', 'ECO-08', 'ECO-09', 'ECO-12', 'ECO-17', 'ECO-18'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="container animate-fade-in" style={{ paddingBottom: '4rem' }}>
