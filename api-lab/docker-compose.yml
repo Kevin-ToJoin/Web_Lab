@@ -107,3 +107,15 @@ services:
       - "4003:4003"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Healthcare module (Patient Portal): scheduling, clinical logic, PHI ──
+  healthcare-api:
+    build: ./services/healthcare
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4004"
+      DATABASE_URL: postgres://lab:lab@db:5432/healthcare
+    ports:
+      - "4004:4004"
+    depends_on:
+      db: { condition: service_healthy }

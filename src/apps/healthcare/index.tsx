@@ -8,7 +8,15 @@ import { Vitals } from './pages/Vitals';
 
 export const HealthcareApp = () => (
   <HealthProvider>
-    <QALayout>
+    <QALayout
+      showDataTabs={false}
+      dockerLab={{
+        name: 'Patient Portal API',
+        port: 4004,
+        bugCount: 12,
+        composeUrl: `${import.meta.env.BASE_URL}labs/healthcare-docker-compose.yml`,
+      }}
+    >
       <Routes>
         <Route path="/" element={<Records />} />
         <Route path="copay" element={<Copay />} />

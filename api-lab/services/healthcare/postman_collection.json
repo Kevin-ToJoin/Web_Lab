@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "TestLab 101 — Patient Portal (Healthcare module)",
+    "description": "A deliberately-buggy patient-portal backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4004" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+
+    { "name": "Patient — PHI leak / IDOR: SSN returned, no auth (HLTH-05)", "request": { "method": "GET", "url": "{{baseUrl}}/patients/1" } },
+    { "name": "Patient — missing id returns 200 null (HLTH-08)", "request": { "method": "GET", "url": "{{baseUrl}}/patients/9999" } },
+
+    {
+      "name": "Copay — deductible-met boundary > vs >= (HLTH-03)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"patient_id\": 1\n}" },
+        "url": "{{baseUrl}}/copay/estimate"
+      }
+    },
+    {
+      "name": "Copay — pediatric age off-by-one, exactly 18 (HLTH-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"plan_tier\": \"Silver\",\n  \"deductible_met\": 0,\n  \"dob\": \"2008-01-01\"\n}" },
+        "url": "{{baseUrl}}/copay/estimate"
+      }
+    },
+
+    {
+      "name": "Appointment — booked in the PAST (HLTH-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"patient_id\": 1,\n  \"provider_id\": 1,\n  \"slot_at\": \"2000-01-01T09:00:00\"\n}" },
+        "url": "{{baseUrl}}/appointments"
+      }
+    },
+    {
+      "name": "Appointment — DOUBLE-BOOK (run twice, same slot) (HLTH-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"patient_id\": 1,\n  \"provider_id\": 1,\n  \"slot_at\": \"2099-01-01T09:00:00\"\n}" },
+        "url": "{{baseUrl}}/appointments"
+      }
+    },
+    { "name": "Appointment — date range end-exclusive (HLTH-07)", "request": { "method": "GET", "url": "{{baseUrl}}/appointments?from=2000-01-01&to=2000-01-01" } },
+    { "name": "Appointment — 'today' timezone drift (HLTH-10)", "request": { "method": "GET", "url": "{{baseUrl}}/appointments/today" } },
+    {
+      "name": "Appointment — cancel a COMPLETED one (HLTH-11)",
+      "request": { "method": "POST", "url": "{{baseUrl}}/appointments/2/cancel" }
+    },
+    {
+      "name": "Appointment — malformed JSON → 500 html (HLTH-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"patient_id\": 1, " },
+        "url": "{{baseUrl}}/appointments"
+      }
+    },
+
+    {
+      "name": "Vitals — impossible values accepted (HLTH-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"patient_id\": 1,\n  \"systolic\": 9999,\n  \"diastolic\": -20,\n  \"heart_rate\": -5,\n  \"temp_c\": 900\n}" },
+        "url": "{{baseUrl}}/vitals"
+      }
+    },
+
+    { "name": "Admin — no authz, dumps all patients + SSN (HLTH-12)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/patients" } }
+  ]
+}

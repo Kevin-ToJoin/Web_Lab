@@ -1,0 +1,41 @@
+# TestLab 101 — Module 5 (Patient Portal / Healthcare) — beginner setup.
+#
+# This is the ONLY file you need. It PULLS pre-built images (no source code, no
+# Git, no build) and starts the whole environment with one command:
+#
+#   docker compose up
+#
+# Then open http://localhost:4004/_lab/requirements  (the API)
+#      and  http://localhost:8080                     (Adminer — browse the DB)
+#
+# Stop with Ctrl+C, then:  docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: healthcare       # the healthcare-api creates its own tables on boot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d healthcare"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  healthcare-api:
+    image: ghcr.io/kevin-tojoin/web_lab/healthcare-api:latest
+    pull_policy: always
+    environment:
+      PORT: "4004"
+      DATABASE_URL: postgres://lab:lab@db:5432/healthcare
+    ports:
+      - "4004:4004"
+    depends_on:
+      db: { condition: service_healthy }
+
+  adminer:
+    image: adminer:4
+    ports:
+      - "8080:8080"
+    depends_on:
+      db: { condition: service_healthy }
