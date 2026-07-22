@@ -72,6 +72,18 @@ export function keyIsValid(provided: string): boolean {
 }
 
 export default async function handler(req: any, res: any) {
+  // CORS: the app is served from tojoin.org/Lab101 (a proxy in front of a
+  // different project) but this function lives on the Web_Lab deployment, so
+  // the browser calls it cross-origin. It's key-gated and stateless (no
+  // cookies), so a wildcard origin is safe.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Vary', 'Origin');
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method not allowed' });
     return;

@@ -70,9 +70,14 @@ interface QAPanelState {
 const QAPanelContext = createContext<QAPanelState | undefined>(undefined);
 
 const SOLUTIONS_PASSWORD = 'REVEAL';
-// Root-relative on purpose: the app is served under /Lab101/ but the serverless
-// function lives at the origin root (/api/*), outside the SPA rewrite.
-const SOLUTIONS_ENDPOINT = '/api/solutions';
+// Where the answers function lives. In production the app is served from
+// tojoin.org/Lab101 — a proxy in front of a *different* project — so a
+// same-origin /api call never reaches this project's function. We therefore
+// call the Web_Lab deployment directly (cross-origin, CORS-enabled). Override
+// with VITE_SOLUTIONS_API to point at a custom domain; dev uses same-origin.
+const SOLUTIONS_ENDPOINT =
+  (import.meta.env.VITE_SOLUTIONS_API as string | undefined) ||
+  (import.meta.env.PROD ? 'https://web-lab-lime-one.vercel.app/api/solutions' : '/api/solutions');
 
 export const QAProvider = ({ children }: { children: ReactNode }) => {
   const [requirementsMarkdown, setRequirements] = useState<string>('## Select a page\nNavigate to any page to load its requirements.');
