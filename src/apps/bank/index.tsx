@@ -9,7 +9,15 @@ import { Statement } from './pages/Statement';
 
 export const BankApp = () => (
   <BankProvider>
-    <QALayout>
+    <QALayout
+      showDataTabs={false}
+      dockerLab={{
+        name: 'Vault Bank API',
+        port: 4001,
+        bugCount: 12,
+        composeUrl: `${import.meta.env.BASE_URL}labs/bank-docker-compose.yml`,
+      }}
+    >
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="transfer" element={<Transfer />} />

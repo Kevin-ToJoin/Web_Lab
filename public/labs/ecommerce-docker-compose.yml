@@ -1,0 +1,68 @@
+# TestLab 101 — Module 2 (E-commerce Store / OrderFlow) — beginner setup.
+#
+# This is the ONLY file you need. It PULLS pre-built images (no source code, no
+# Git, no build) and starts the whole environment with one command:
+#
+#   docker compose up
+#
+# This module has an extra piece: a background QUEUE. Orders are placed by the
+# API and fulfilled asynchronously by a WORKER via Redis — so you can test
+# queue/async bugs (retries, poisoned jobs, non-idempotent processing), not just
+# HTTP and DB.
+#
+# Then open http://localhost:4000/_lab/requirements  (the API)
+#      and  http://localhost:8080                     (Adminer — browse the DB)
+#
+# Stop with Ctrl+C, then:  docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: ecommerce        # the ecommerce-api creates its own tables on boot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d ecommerce"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ecommerce-api:
+    image: ghcr.io/kevin-tojoin/web_lab/ecommerce-api:latest
+    pull_policy: always
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4000"
+      DATABASE_URL: postgres://lab:lab@db:5432/ecommerce
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "4000:4000"
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  ecommerce-worker:
+    image: ghcr.io/kevin-tojoin/web_lab/ecommerce-api:latest
+    pull_policy: always
+    command: npx tsx src/worker.ts
+    environment:
+      DATABASE_URL: postgres://lab:lab@db:5432/ecommerce
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  adminer:
+    image: adminer:4
+    ports:
+      - "8080:8080"
+    depends_on:
+      db: { condition: service_healthy }

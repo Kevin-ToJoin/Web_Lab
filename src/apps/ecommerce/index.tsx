@@ -11,7 +11,15 @@ import { Profile } from './pages/Profile';
 
 export const EcommerceApp = () => (
   <CartProvider>
-    <QALayout>
+    <QALayout
+      showDataTabs={false}
+      dockerLab={{
+        name: 'OrderFlow API',
+        port: 4000,
+        bugCount: 19,
+        composeUrl: `${import.meta.env.BASE_URL}labs/ecommerce-docker-compose.yml`,
+      }}
+    >
       <Routes>
         <Route path="/" element={<Storefront />} />
         <Route path="product/:id" element={<ProductDetail />} />
