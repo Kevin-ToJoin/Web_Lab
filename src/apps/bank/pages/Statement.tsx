@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { FileText, Download } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useBank, STATEMENT_OPENING_BALANCE } from '../context/BankContext';
 import { BankChrome } from './BankChrome';
 
 const STATEMENT_ACCOUNT = '1001-2002-3003';
 
 export const Statement = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { transactions, accounts } = useBank();
 
   // BUG BNK-30: the month selector is pure decoration — changing it never
@@ -52,39 +52,9 @@ URL: \`/bank/statement\` — account \`${STATEMENT_ACCOUNT}\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'BNK-28', title: 'Statement closing balance does not reconcile with the live account',
-        location: 'BankContext.tsx — STATEMENT_OPENING_BALANCE / Statement.tsx', technique: 'Data Integrity',
-        buggyCode: 'export const STATEMENT_OPENING_BALANCE = 1000.0; // hardcoded, never updated\nconst closing = STATEMENT_OPENING_BALANCE + credits - debits;',
-        fixedCode: '// Derive the opening balance from the ledger (prior period\'s closing),\n// so opening + net movement always equals the live balance.',
-        explanation: 'The opening balance is a stale hardcoded constant. Opening ($1,000) + credits − debits computes a closing that disagrees with the account\'s actual balance shown on the Dashboard — the books don\'t balance.',
-      },
-      {
-        bugId: 'BNK-29', title: 'Statement dates render as raw ISO timestamps',
-        location: 'Statement.tsx — transaction rows', technique: 'Content Bug',
-        buggyCode: '<div>{t.date}</div> // "2026-07-03T15:30:00Z"',
-        fixedCode: '<div>{new Date(t.date).toLocaleDateString()}</div>',
-        explanation: 'A customer-facing statement shows machine timestamps instead of formatted dates.',
-      },
-      {
-        bugId: 'BNK-30', title: 'Month selector does not filter anything',
-        location: 'Statement.tsx — month select', technique: 'Broken UI',
-        buggyCode: 'const [month, setMonth] = useState("2026-07");\nconst acctTx = transactions.filter(t => t.account === STATEMENT_ACCOUNT);\n// `month` is never used in the filter',
-        fixedCode: 'const acctTx = transactions.filter(t => t.account === STATEMENT_ACCOUNT && t.date.startsWith(month));',
-        explanation: 'The dropdown updates its own state and nothing else — every month shows the identical transaction list.',
-      },
-      {
-        bugId: 'BNK-31', title: '"Download PDF" button is a no-op',
-        location: 'Statement.tsx — download button', technique: 'Broken UI',
-        buggyCode: '<button className="btn btn-secondary"><Download /> Download PDF</button>\n// no onClick at all',
-        fixedCode: '<button onClick={generateStatementPdf}>Download PDF</button>\n// or remove/disable the button until the feature ships',
-        explanation: 'The button renders as fully functional but has no handler — clicking it does nothing, with no feedback.',
-      },
-    ];
-    setSolutions(solutions);
+    setRemoteSolutions({ app: 'bank', bugIds: ['BNK-28', 'BNK-29', 'BNK-30', 'BNK-31'] });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, accounts, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [transactions, accounts, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <BankChrome>

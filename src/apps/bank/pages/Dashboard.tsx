@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../../../qa/QAContext';
 import { useBank, INITIAL_ACCOUNTS } from '../context/BankContext';
 import { BankChrome } from './BankChrome';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { accounts, sessionStart } = useBank();
 
   // BUG BNK-15: "your total balance" sums EVERY account in the book, including
@@ -65,46 +65,9 @@ URL: \`/bank\`
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'BNK-03', title: 'Any user can view other users\' accounts and balances',
-        location: 'Dashboard.tsx — account list / /api/accounts/balance', technique: 'Data Exposure',
-        buggyCode: 'accounts.map(a => <AccountCard ... />) // renders all four accounts',
-        fixedCode: 'accounts.filter(a => a.isCurrentUser).map(a => <AccountCard ... />)',
-        explanation: 'The dashboard renders every account in the book — including Bob\'s and Carol\'s, with balances. Filter to the current user, and enforce ownership server-side too.',
-      },
-      {
-        bugId: 'BNK-07', title: 'Session never expires — stale tokens accepted forever',
-        location: 'BankContext.tsx — sessionStart', technique: 'Session',
-        buggyCode: 'const [sessionStart] = useState(() => Date.now());\n// nothing ever checks or expires it',
-        fixedCode: 'if (Date.now() - sessionStart > SESSION_TTL) { logout(); return; }',
-        explanation: 'The session banner honestly reports "expires: never." There is no inactivity timeout, so a stolen or stale token keeps working indefinitely.',
-      },
-      {
-        bugId: 'BNK-15', title: '"Your total balance" sums other customers\' accounts',
-        location: 'Dashboard.tsx — totalBalance', technique: 'Data Integrity',
-        buggyCode: 'const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);',
-        fixedCode: 'const totalBalance = accounts.filter(a => a.isCurrentUser).reduce((s, a) => s + a.balance, 0);',
-        explanation: 'Alice\'s balances are $1,500.00 + $320.50 = $1,820.50, but the headline number includes Bob\'s $8,750.25 and Carol\'s $42.00 too.',
-      },
-      {
-        bugId: 'BNK-16', title: 'Full account numbers are displayed unmasked',
-        location: 'Dashboard.tsx — account cards', technique: 'Security / PII',
-        buggyCode: '<div>{a.number}</div> // "1001-2002-3003" in full',
-        fixedCode: '<div>{`****-****-${a.number.slice(-4)}`}</div>',
-        explanation: 'Banking UIs mask account numbers to limit shoulder-surfing and screenshot leakage. These render in full everywhere.',
-      },
-      {
-        bugId: 'BNK-17', title: 'Account cards are not keyboard-accessible',
-        location: 'Dashboard.tsx — account cards', technique: 'Accessibility',
-        buggyCode: '<div className="glass-panel" onClick={() => navigate("/bank/transfer")}>...</div>',
-        fixedCode: '<button className="glass-panel" onClick={() => navigate("/bank/transfer")}>...</button>',
-        explanation: 'A clickable <div> with no tabIndex/role cannot be reached or activated with the keyboard.',
-      },
-    ];
-    setSolutions(solutions);
+    setRemoteSolutions({ app: 'bank', bugIds: ['BNK-03', 'BNK-07', 'BNK-15', 'BNK-16', 'BNK-17'] });
      
-  }, [accounts, sessionStart, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [accounts, sessionStart, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <BankChrome>
