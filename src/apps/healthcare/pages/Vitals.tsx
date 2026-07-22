@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pill } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { MAX_DOSAGE_MG } from '../context/HealthContext';
 import { HealthChrome } from './HealthChrome';
 
 export const Vitals = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [weight, setWeight] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -112,59 +112,8 @@ URL: \`/healthcare/vitals\`
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'HLT-04', title: 'BMI treats pounds as kilograms', location: 'Vitals.tsx — calculateBmi()',
-        technique: 'Logic Error',
-        buggyCode: 'setBmi(w / (meters * meters)); // w is in lb',
-        fixedCode: 'const kg = w * 0.453592;\nsetBmi(kg / (meters * meters));',
-        explanation: 'Pounds are used directly as kg, inflating BMI by ~2.2×. Convert lb→kg (×0.453592) first.',
-      },
-      {
-        bugId: 'HLT-06', title: 'Dosage has no upper bound', location: 'Vitals.tsx — handlePrescribe()',
-        technique: 'Boundary Value',
-        buggyCode: 'if (dose <= 0) { ...reject }',
-        fixedCode: `if (dose <= 0 || dose > ${MAX_DOSAGE_MG}) { setRxStatus("Error: dosage out of range."); return; }`,
-        explanation: 'Only the lower bound is enforced, allowing overdoses. Also reject dose above the max.',
-      },
-      {
-        bugId: 'HLT-12', title: 'Allergies not required to prescribe', location: 'Vitals.tsx — handlePrescribe()',
-        technique: 'Missing Validation',
-        buggyCode: 'void allergies; // not validated',
-        fixedCode: 'if (allergies.trim() === "") { setRxStatus("Error: confirm allergies first."); return; }',
-        explanation: 'A prescription is issued without confirming allergy history. Require the allergy field.',
-      },
-      {
-        bugId: 'HLT-13', title: 'BP allows impossible values', location: 'Vitals.tsx — handlePrescribe()',
-        technique: 'Boundary Value',
-        buggyCode: 'if (isNaN(sys) || isNaN(dia)) { ...reject }',
-        fixedCode: 'if (sys < 40 || sys > 300 || dia < 20 || dia > 200 || dia >= sys) {\n  setRxStatus("Error: implausible BP."); return;\n}',
-        explanation: 'Only NaN is rejected, so values like 9000/0 pass. Enforce physiologically plausible ranges.',
-      },
-      {
-        bugId: 'HLT-18', title: 'Implausible heights accepted (3 cm, 900 cm)',
-        location: 'Vitals.tsx — calculateBmi()', technique: 'Boundary Value',
-        buggyCode: 'if (isNaN(w) || isNaN(h) || h <= 0) { ...reject } // only zero/negative rejected',
-        fixedCode: 'if (h < 50 || h > 250) { setBmi(null); setRxStatus("Error: implausible height."); return; }',
-        explanation: 'A 3 cm height produces a BMI in the tens of thousands; 900 cm produces near zero. Enforce a plausible human range.',
-      },
-      {
-        bugId: 'HLT-19', title: 'Negative weight produces a negative BMI',
-        location: 'Vitals.tsx — calculateBmi()', technique: 'Boundary Value',
-        buggyCode: 'if (isNaN(w) || ...) // negative w passes straight through',
-        fixedCode: 'if (w <= 0) { setBmi(null); return; }',
-        explanation: 'Weight is only checked for NaN — entering -50 renders a negative BMI as if it were a valid result.',
-      },
-      {
-        bugId: 'HLT-20', title: 'Displayed BMI goes stale when inputs change',
-        location: 'Vitals.tsx — bmi state', technique: 'Stale State',
-        buggyCode: 'onChange={(e) => setWeight(e.target.value)} // bmi is not invalidated',
-        fixedCode: 'const handleWeight = (v) => { setWeight(v); setBmi(null); };',
-        explanation: 'After calculating, editing weight or height leaves the old BMI on screen next to the new inputs — a misleading clinical reading.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'healthcare', bugIds: ['HLT-04', 'HLT-06', 'HLT-12', 'HLT-13', 'HLT-18', 'HLT-19', 'HLT-20'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <HealthChrome>

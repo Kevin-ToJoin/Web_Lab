@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FileText, Activity } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { HealthChrome } from './HealthChrome';
 
 export const Copay = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [age, setAge] = useState('');
   const [insuranceType, setInsuranceType] = useState('private');
@@ -112,45 +112,8 @@ URL: \`/healthcare/copay\`
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'HLT-01', title: 'Copay uses OR instead of AND', location: 'Copay.tsx — calculateCopay()',
-        technique: 'Decision Table',
-        buggyCode: 'else if (ageNum >= 65 || hasCondition) { base = 30; }',
-        fixedCode: 'else if (ageNum >= 65 && hasCondition) { base = 20; }\nelse if (ageNum >= 65 || hasCondition) { base = 30; }',
-        explanation: 'The OR makes the "senior AND condition = $20" branch unreachable. Check the AND case first.',
-      },
-      {
-        bugId: 'HLT-08', title: 'Pediatric branch unreachable', location: 'Copay.tsx — calculateCopay()',
-        technique: 'Decision Table',
-        buggyCode: 'if (ageNum < 18) { base = 0; }\nelse if (ageNum < 18 && isPediatricEnrolled) { base = 5; }',
-        fixedCode: 'if (ageNum < 18) { base = isPediatricEnrolled ? 5 : 0; }',
-        explanation: 'The first branch swallows all minors, so the pediatric branch never runs. Fold the flag into the minor branch.',
-      },
-      {
-        bugId: 'HLT-10', title: 'Eligibility wrong at age 65', location: 'Copay.tsx — calculateCopay()',
-        technique: 'Boundary Value',
-        buggyCode: 'const medicareEligible = ageNum > 65;',
-        fixedCode: 'const medicareEligible = ageNum >= 65;',
-        explanation: 'Medicare starts at 65 (inclusive). Using > 65 excludes patients who are exactly 65.',
-      },
-      {
-        bugId: 'HLT-14', title: 'Copay can go negative', location: 'Copay.tsx — calculateCopay()',
-        technique: 'Logic Error',
-        buggyCode: 'const finalCopay = base - disc;',
-        fixedCode: 'const finalCopay = Math.max(0, base - disc);',
-        explanation: 'A discount larger than the copay yields a negative copay. Clamp the result at 0.',
-      },
-      {
-        bugId: 'HLT-15', title: 'Insurance Type selector has no effect on the calculation',
-        location: 'Copay.tsx — insuranceType state', technique: 'Decorative Control',
-        buggyCode: 'const [insuranceType, setInsuranceType] = useState("private");\n// calculateCopay() never reads insuranceType',
-        fixedCode: '// Wire the plan into the decision table (each plan has its own base rates),\n// or remove the selector until the feature exists.',
-        explanation: 'The dropdown captures a value that nothing consumes — switching between Private, Medicare, and Pediatric never changes the estimate, silently misleading the user.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'healthcare', bugIds: ['HLT-01', 'HLT-08', 'HLT-10', 'HLT-14', 'HLT-15'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <HealthChrome>

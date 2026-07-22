@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { FileText } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { PATIENTS } from '../context/HealthContext';
 import { HealthChrome } from './HealthChrome';
 
@@ -9,7 +9,7 @@ import { HealthChrome } from './HealthChrome';
 const computeAge = (dob: string) => new Date().getFullYear() - new Date(dob).getFullYear();
 
 export const Records = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   useEffect(() => {
     setRequirements(`## MediPortal — Patient Records
@@ -33,38 +33,8 @@ URL: \`/healthcare\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'HLT-05', title: 'Age off-by-one for patients whose birthday hasn\'t passed',
-        location: 'Records.tsx — computeAge()', technique: 'Edge Case',
-        buggyCode: 'const computeAge = (dob) => new Date().getFullYear() - new Date(dob).getFullYear();',
-        fixedCode: 'let age = today.getFullYear() - dob.getFullYear();\nconst m = today.getMonth() - dob.getMonth();\nif (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;\nreturn age;',
-        explanation: 'Naive year subtraction over-counts anyone whose birthday is still ahead this year — Riley Chen (born Nov 30) shows 41 while the stored correct age is 40.',
-      },
-      {
-        bugId: 'HLT-21', title: 'A patient can read every other patient\'s record',
-        location: 'Records.tsx — patients table', technique: 'Privacy / Data Exposure',
-        buggyCode: 'PATIENTS.map(p => <RecordRow ... />) // all four patients render',
-        fixedCode: 'PATIENTS.filter(p => p.id === session.patientId).map(...)',
-        explanation: 'The session says "logged in as Jordan Lee (patient)", yet Sam\'s, Alex\'s, and Riley\'s DOBs, insurance, and allergies are all visible — a serious privacy failure in a healthcare context.',
-      },
-      {
-        bugId: 'HLT-22', title: 'DOB rendered as a raw ISO string',
-        location: 'Records.tsx — DOB column', technique: 'Content Bug',
-        buggyCode: '<td>{p.dob}</td> // "1961-06-14"',
-        fixedCode: '<td>{new Date(p.dob).toLocaleDateString(undefined, { dateStyle: "long" })}</td>',
-        explanation: 'Dates of birth display in machine format instead of a localized, unambiguous form.',
-      },
-      {
-        bugId: 'HLT-23', title: 'Empty allergies cell is indistinguishable from "none"',
-        location: 'Records.tsx — allergies column', technique: 'Data Quality',
-        buggyCode: '<td>{p.allergies}</td> // "" renders as a blank cell',
-        fixedCode: '<td>{p.allergies === "" ? <em>not recorded — verify!</em> : p.allergies}</td>',
-        explanation: 'Sam\'s record says "none" (confirmed no allergies) while Alex\'s is an empty string (never asked). The UI renders both the same way — clinically dangerous ambiguity.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'healthcare', bugIds: ['HLT-05', 'HLT-21', 'HLT-22', 'HLT-23'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <HealthChrome>
