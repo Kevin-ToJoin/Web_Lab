@@ -1,0 +1,82 @@
+{
+  "info": {
+    "name": "TestLab 101 — QuickBite (Delivery module)",
+    "description": "A deliberately-buggy food-delivery backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4007" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Restaurants — list", "request": { "method": "GET", "url": "{{baseUrl}}/restaurants" } },
+
+    {
+      "name": "Order — out of zone (distance 99km) (DELV-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"far\",\n  \"distance_km\": 99,\n  \"subtotal\": 30\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — below minimum (DELV-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"1 St\",\n  \"distance_km\": 2,\n  \"subtotal\": 3\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — placed at 03:00, closed (DELV-03)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"1 St\",\n  \"distance_km\": 2,\n  \"subtotal\": 30,\n  \"placed_at\": \"2999-01-01T03:00:00\"\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — STACK 3 non-stackable promos (DELV-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"1 St\",\n  \"distance_km\": 2,\n  \"subtotal\": 30,\n  \"promo_codes\": [\"SAVE5\", \"WELCOME\", \"FRIENDS\"],\n  \"tip_pct\": 15\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — negative tip lowers total (DELV-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"1 St\",\n  \"distance_km\": 2,\n  \"subtotal\": 30,\n  \"tip_pct\": -50\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — free-delivery boundary, subtotal exactly 25 (DELV-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"restaurant_id\": 1,\n  \"user_id\": 9,\n  \"customer_name\": \"X\",\n  \"customer_phone\": \"555\",\n  \"customer_address\": \"1 St\",\n  \"distance_km\": 2,\n  \"subtotal\": 25\n}" },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    {
+      "name": "Order — malformed JSON → 500 html (DELV-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"restaurant_id\": 1, " },
+        "url": "{{baseUrl}}/orders"
+      }
+    },
+    { "name": "Order — missing id returns 200 null (DELV-08)", "request": { "method": "GET", "url": "{{baseUrl}}/orders/9999" } },
+    { "name": "Order — PII leak, phone & address (DELV-11)", "request": { "method": "GET", "url": "{{baseUrl}}/orders/1" } },
+    { "name": "Order — cancel a DELIVERED one (DELV-10)", "request": { "method": "POST", "url": "{{baseUrl}}/orders/1/cancel" } },
+    { "name": "Admin — no authz, all orders + PII (DELV-12)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/orders" } }
+  ]
+}

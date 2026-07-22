@@ -8,3 +8,4 @@ CREATE DATABASE registration;
 CREATE DATABASE healthcare;
 CREATE DATABASE trading;
 CREATE DATABASE hotel;
+CREATE DATABASE delivery;
