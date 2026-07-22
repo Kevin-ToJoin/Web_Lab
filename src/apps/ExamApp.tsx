@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Flag, ChevronLeft, ChevronRight, Award, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface Question {
   id: string;
@@ -67,7 +67,7 @@ interface Result {
 
 const ExamInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -289,66 +289,8 @@ questions, flag items for review, and submit for an automatically-graded score.
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'EXM-01', title: 'Timer runs past zero / auto-submit fires late', location: 'ExamApp.tsx — timer effects', technique: 'Timer',
-        buggyCode: 'setTimeLeft(t => t - 1); // never stops\nif (timeLeft < 0) grade();',
-        fixedCode: 'setTimeLeft(t => Math.max(0, t - 1));\nif (timeLeft <= 0) grade();',
-        explanation: 'The countdown keeps decrementing below zero and auto-submit waits for < 0, firing a tick late. Clamp at 0 and submit at <= 0.' },
-      { bugId: 'EXM-02', title: 'Pass cutoff uses > instead of >=', location: 'ExamApp.tsx — grade()', technique: 'Boundary Value',
-        buggyCode: 'const passed = percentage > 70;',
-        fixedCode: 'const passed = percentage >= PASS_MARK;',
-        explanation: 'Exactly 70% should pass, but > 70 fails it. Use >=.' },
-      { bugId: 'EXM-03', title: 'Unanswered questions counted correct', location: 'ExamApp.tsx — grade()', technique: 'Logic Error',
-        buggyCode: 'if (ans === undefined) { score += points; }',
-        fixedCode: 'if (ans === undefined) { continue; } // 0 points',
-        explanation: 'A blank answer is scored as correct, so an empty exam can pass. Blanks earn zero.' },
-      { bugId: 'EXM-04', title: 'Negative marking applied to blank answers', location: 'ExamApp.tsx — grade()', technique: 'Logic Error',
-        buggyCode: 'if (ans === undefined) { score -= NEGATIVE_MARK; }',
-        fixedCode: '// only deduct on a WRONG answer, never on a blank',
-        explanation: 'Negative marking should punish wrong answers only, not unanswered ones.' },
-      { bugId: 'EXM-05', title: 'Rounding flips a fail into a pass', location: 'ExamApp.tsx — grade()', technique: 'Boundary Value',
-        buggyCode: 'const percentage = Math.round(raw); // 69.5 -> 70',
-        fixedCode: 'const percentage = Math.floor(raw); // or compare raw score directly',
-        explanation: 'Math.round pushes 69.5% up to 70 and passes it. Floor the percentage or compare the raw score.' },
-      { bugId: 'EXM-06', title: 'Going back loses the previous answer', location: 'ExamApp.tsx — goPrev()', technique: 'State Bug',
-        buggyCode: 'delete copy[target]; // wipes the earlier answer',
-        fixedCode: 'setCurrent(target); // keep answers intact',
-        explanation: 'Navigating to a prior question deletes its stored answer. Navigation must not mutate answers.' },
-      { bugId: 'EXM-07', title: 'Flagged-for-review count is wrong', location: 'ExamApp.tsx — grade()', technique: 'Logic Error',
-        buggyCode: 'Object.keys(flagged).length // counts un-flagged too',
-        fixedCode: 'Object.values(flagged).filter(Boolean).length',
-        explanation: 'Un-flagged questions (value false) still have a key, inflating the count. Count only true values.' },
-      { bugId: 'EXM-08', title: 'Last question skipped during grading', location: 'ExamApp.tsx — grade()', technique: 'Edge Case',
-        buggyCode: 'for (let i = 0; i < QUESTIONS.length - 1; i++)',
-        fixedCode: 'for (let i = 0; i < QUESTIONS.length; i++)',
-        explanation: 'The loop bound is off-by-one, so the final question is never scored. Loop to length.' },
-      { bugId: 'EXM-09', title: 'Exam submits with zero answers', location: 'ExamApp.tsx — grade()', technique: 'Missing Validation',
-        buggyCode: '// no check for answered count',
-        fixedCode: 'if (Object.keys(answers).length === 0) { setStatus("Answer at least one question."); return; }',
-        explanation: 'An entirely blank exam can be submitted. Require at least one answer.' },
-      { bugId: 'EXM-10', title: 'Timer resets on question change', location: 'ExamApp.tsx — current effect', technique: 'Timer',
-        buggyCode: 'useEffect(() => setTimeLeft(EXAM_SECONDS), [current]);',
-        fixedCode: '// initialise the timer once, not on every navigation',
-        explanation: 'Changing questions restarts the clock, giving unlimited time. Start the timer a single time.' },
-      { bugId: 'EXM-11', title: 'Partial answer gets full credit', location: 'ExamApp.tsx — grade()', technique: 'Logic Error',
-        buggyCode: 'if (ans === q.partialAnswer) score += points;',
-        fixedCode: 'if (ans === q.partialAnswer) score += points / 2;',
-        explanation: 'A partially-correct answer earns full marks. It should earn half.' },
-      { bugId: 'EXM-12', title: 'Answer accepted at 0:00', location: 'ExamApp.tsx — selectAnswer()', technique: 'Boundary Value',
-        buggyCode: 'setAnswers(...); // no time guard',
-        fixedCode: 'if (timeLeft <= 0) return; setAnswers(...);',
-        explanation: 'At (and below) 0:00 a new answer is still recorded. Reject answers once time is up.' },
-      { bugId: 'EXM-13', title: 'Duplicated question counted twice', location: 'ExamApp.tsx — QUESTIONS array', technique: 'Logic Error',
-        buggyCode: 'const QUESTIONS = [...BASE, BASE[1]]; // dup',
-        fixedCode: 'const QUESTIONS = dedupeById(BASE);',
-        explanation: 'A duplicate entry inflates the total question count. De-duplicate the question list.' },
-      { bugId: 'EXM-14', title: 'Retake keeps the previous score', location: 'ExamApp.tsx — retake()', technique: 'Logic Error',
-        buggyCode: '// result is never cleared on retake',
-        fixedCode: 'setResult(null);',
-        explanation: 'Retaking the exam leaves the old result on screen. Clear the result when starting over.' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'exam', bugIds: ['EXM-01', 'EXM-02', 'EXM-03', 'EXM-04', 'EXM-05', 'EXM-06', 'EXM-07', 'EXM-08', 'EXM-09', 'EXM-10', 'EXM-11', 'EXM-12', 'EXM-13', 'EXM-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const q = QUESTIONS[current];
   const isFlagged = !!flagged[current];
@@ -470,7 +412,15 @@ questions, flag items for review, and submit for an automatically-graded score.
 };
 
 export const ExamApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'CertifyHub Exam API',
+      port: 4008,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/exam-docker-compose.yml`,
+    }}
+  >
     <ExamInner />
   </QALayout>
 );
