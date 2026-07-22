@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 
 export const Checkout = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { subtotal, finalTotal, placeOrder } = useCart();
   // BUG ECO-30: savedAddress/savedEmail from CartContext are intentionally never
   // read here — the form always starts blank instead of pre-filling.
@@ -55,83 +55,8 @@ export const Checkout = () => {
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-03', title: 'Address not validated', location: 'Checkout.tsx — handleCheckout()',
-        technique: 'Missing Validation',
-        buggyCode: 'if (subtotal <= 0) { ... }\n// no address check',
-        fixedCode: 'if (address.trim() === "") {\n  setCheckoutStatus("Error: Address is required.");\n  return;\n}',
-        explanation: 'Checkout proceeds with a blank address. Validate before placing the order.',
-      },
-      {
-        bugId: 'ECO-10', title: 'Checkout enabled on empty cart', location: 'Checkout.tsx — checkout button',
-        technique: 'Logic Error',
-        buggyCode: '<button className="btn btn-primary" onClick={handleCheckout}>',
-        fixedCode: '<button disabled={subtotal <= 0} onClick={handleCheckout}>',
-        explanation: 'The button is always clickable; disable it when the cart is empty.',
-      },
-      {
-        bugId: 'ECO-11', title: 'Email not validated', location: 'Checkout.tsx — handleCheckout()',
-        technique: 'Missing Validation',
-        buggyCode: '// no email validation before placing order',
-        fixedCode: 'if (!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email)) {\n  setCheckoutStatus("Error: Invalid email."); return;\n}',
-        explanation: 'Orders accept any email. Validate the format before checkout.',
-      },
-      {
-        bugId: 'ECO-30', title: 'Checkout form never pre-fills from the saved profile',
-        location: 'Checkout.tsx — initial state', technique: 'Missing Functionality',
-        buggyCode: `const [address, setAddress] = useState(''); // ignores savedAddress from CartContext`,
-        fixedCode: `const [address, setAddress] = useState(savedAddress);`,
-        explanation: 'A saved address exists (see Profile page) but returning customers must re-type it on every order.',
-      },
-      {
-        bugId: 'ECO-47', title: 'Card number is not Luhn-validated',
-        location: 'Checkout.tsx — handleCheckout()', technique: 'Equivalence Partitioning',
-        buggyCode: `// no card validation before calling placeOrder`,
-        fixedCode: `function luhn(n: string) { /* standard Luhn check */ }
-if (!luhn(card.replace(/\\s/g, ''))) return setCheckoutStatus('Error: Invalid card.');`,
-        explanation: 'Any 16-character string passes as a valid card — there is no Luhn algorithm check at all.',
-      },
-      {
-        bugId: 'ECO-48', title: 'Empty card field is accepted',
-        location: 'Checkout.tsx — handleCheckout()', technique: 'Missing Validation',
-        buggyCode: `// card state is read but never checked for emptiness`,
-        fixedCode: `if (!card.trim()) return setCheckoutStatus('Error: Card number is required.');`,
-        explanation: 'Leaving the card field completely blank still places the order successfully.',
-      },
-      {
-        bugId: 'ECO-49', title: 'Double-click on Complete Checkout can place two orders',
-        location: 'Checkout.tsx — handleCheckout()', technique: 'Race Condition',
-        buggyCode: `<button onClick={handleCheckout}>Complete Checkout</button>
-// no disabled/loading state during placeOrder()`,
-        fixedCode: `const [placing, setPlacing] = useState(false);
-<button disabled={placing} onClick={async () => { setPlacing(true); await handleCheckout(); }}>`,
-        explanation: 'The button stays clickable while the order is being placed — a fast double-click submits twice.',
-      },
-      {
-        bugId: 'ECO-50', title: 'Card number field has no maxLength or formatting',
-        location: 'Checkout.tsx — card input', technique: 'Boundary Value',
-        buggyCode: `<input value={card} onChange={e => setCard(e.target.value)} placeholder="0000 0000 0000 0000" />`,
-        fixedCode: `<input maxLength={19} value={formatCardNumber(card)} onChange={...} placeholder="0000 0000 0000 0000" />`,
-        explanation: 'Any length or character set can be typed into the card field, with no grouping or cap.',
-      },
-      {
-        bugId: 'ECO-51', title: 'Required fields show a red asterisk but have no required/aria-required attribute',
-        location: 'Checkout.tsx — Email/Address/Card inputs', technique: 'Accessibility',
-        buggyCode: `<label>Email <span style={{color:'red'}}>*</span></label>\n<input value={email} onChange={...} />`,
-        fixedCode: `<label htmlFor="email">Email *</label>\n<input id="email" required aria-required="true" value={email} onChange={...} />`,
-        explanation: 'The red asterisk is purely visual — assistive technology has no programmatic way to know these fields are mandatory.',
-      },
-      {
-        bugId: 'ECO-52', title: 'No order summary (items) shown at checkout',
-        location: 'Checkout.tsx — page body', technique: 'Missing Functionality',
-        buggyCode: `<h2>Total: \${finalTotal.toFixed(2)}</h2>\n{/* no line items listed anywhere on this page */}`,
-        fixedCode: `{cartLines.map(line => <CheckoutLineItem key={line.id} {...line} />)}`,
-        explanation: 'The customer commits to paying a total with no visible breakdown of what they\'re actually buying on this page.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [subtotal, finalTotal, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-03', 'ECO-10', 'ECO-11', 'ECO-30', 'ECO-47', 'ECO-48', 'ECO-49', 'ECO-50', 'ECO-51', 'ECO-52'] });
+  }, [subtotal, finalTotal, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleCheckout = () => {
     // BUG ECO-10: no disabled state backs this up structurally, only this late guard.

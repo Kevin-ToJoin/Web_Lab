@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, Heart } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/mockStore';
 
 export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { addToCart } = useCart();
 
   const product = PRODUCTS.find(p => p.id === Number(id));
@@ -61,109 +61,8 @@ export const ProductDetail = () => {
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-19', title: 'Review comments render raw HTML (XSS)',
-        location: 'ProductDetail.tsx — local review list', technique: 'Security (XSS)',
-        buggyCode: '<p dangerouslySetInnerHTML={{ __html: rev.comment }} />',
-        fixedCode: '<p>{rev.comment}</p>',
-        explanation: 'A submitted review comment is injected as raw HTML — a stored XSS vector via a script/img tag.',
-      },
-      {
-        bugId: 'ECO-20', title: 'Out-of-stock products can be added from the detail page',
-        location: 'ProductDetail.tsx — Add to Cart button', technique: 'Missing Validation',
-        buggyCode: '<button onClick={() => addToCart(product.id, qty)}>Add to Cart</button>\n// no product.stock === 0 check',
-        fixedCode: '<button disabled={product.stock === 0} onClick={() => addToCart(product.id, qty)}>',
-        explanation: 'Unlike the storefront card, the detail page never disables Add to Cart for a 0-stock product.',
-      },
-      {
-        bugId: 'ECO-21', title: 'Main product image has no alt text',
-        location: 'ProductDetail.tsx — hero image', technique: 'Accessibility',
-        buggyCode: '<img src={product.image} />',
-        fixedCode: '<img src={product.image} alt={product.name} />',
-        explanation: 'Screen-reader users get no description of the product photo.',
-      },
-      {
-        bugId: 'ECO-22', title: '"Related Products" ignores category',
-        location: 'ProductDetail.tsx — related section', technique: 'Content Quality',
-        buggyCode: 'const related = PRODUCTS.filter(p => p.id !== product.id).slice(0, 3);',
-        fixedCode: 'const related = PRODUCTS.filter(p => p.id !== product.id && p.category === product.category).slice(0, 3);',
-        explanation: 'The related list is just the next 3 products in DB order, regardless of whether they share a category.',
-      },
-      {
-        bugId: 'ECO-23', title: 'Review dates render as raw ISO strings',
-        location: 'ProductDetail.tsx — review list', technique: 'Content Bug',
-        buggyCode: '<span>{rev.date}</span> // "2026-03-02"',
-        fixedCode: '<span>{new Date(rev.date).toLocaleDateString()}</span>',
-        explanation: 'Dates are shown exactly as stored instead of being formatted for the viewer\'s locale.',
-      },
-      {
-        bugId: 'ECO-24', title: 'Clearing the quantity field silently adds NaN',
-        location: 'ProductDetail.tsx — quantity input', technique: 'Boundary Value',
-        buggyCode: 'onChange={(e) => setQty(parseInt(e.target.value))} // parseInt("") is NaN',
-        fixedCode: 'onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}',
-        explanation: 'Clearing the number input makes parseInt return NaN, which flows straight into addToCart with no guard.',
-      },
-      {
-        bugId: 'ECO-25', title: 'Review textarea has no character limit',
-        location: 'ProductDetail.tsx — review form', technique: 'Boundary Value',
-        buggyCode: '<textarea value={reviewText} onChange={...} /> // no maxLength',
-        fixedCode: '<textarea maxLength={300} value={reviewText} onChange={...} />',
-        explanation: 'A review of unbounded length can be submitted, with no client-side cap.',
-      },
-      {
-        bugId: 'ECO-26', title: 'No average rating or review count shown',
-        location: 'ProductDetail.tsx — reviews header', technique: 'Missing Functionality',
-        buggyCode: '<h2>Reviews</h2>\n{/* no average/count summary */}',
-        fixedCode: 'const avg = reviews.reduce((s, r) => s + r.rating, 0) / (reviews.length || 1);\n<p>{avg.toFixed(1)} ★ — {reviews.length} reviews</p>',
-        explanation: 'Shoppers see individual reviews but never a quick summary stat.',
-      },
-      {
-        bugId: 'ECO-27', title: 'Star ratings have no text alternative',
-        location: 'ProductDetail.tsx — star display', technique: 'Accessibility',
-        buggyCode: '{[...Array(5)].map((_, i) => <Star key={i} fill={i < rev.rating ? "currentColor" : "none"} />)}',
-        fixedCode: '<span role="img" aria-label={`${rev.rating} out of 5 stars`}>...</span>',
-        explanation: 'The star icons are purely decorative SVGs — a screen reader announces nothing about the rating value.',
-      },
-      {
-        bugId: 'ECO-28', title: 'Storefront product cards: only the title is clickable',
-        location: 'Storefront.tsx — product cards', technique: 'Missing Functionality',
-        buggyCode: '<img src={product.image} />\n<h3 onClick={() => navigate(...)}>{product.name}</h3>',
-        fixedCode: '<div onClick={() => navigate(...)}>{/* image + title both inside */}</div>',
-        explanation: 'Clicking the product image does nothing — only the small title text navigates to the detail page.',
-      },
-      {
-        bugId: 'ECO-43', title: 'Wishlist status is never persisted',
-        location: 'ProductDetail.tsx — wishlisted state', technique: 'Stale State',
-        buggyCode: `const [wishlisted, setWishlisted] = useState(false); // never read/written to localStorage`,
-        fixedCode: `const [wishlisted, setWishlisted] = useState(() => localStorage.getItem(\`wish_\${id}\`) === '1');
-useEffect(() => { localStorage.setItem(\`wish_\${id}\`, wishlisted ? '1' : '0'); }, [wishlisted]);`,
-        explanation: 'Reloading the page always resets the wishlist heart, since it only ever lives in component state.',
-      },
-      {
-        bugId: 'ECO-44', title: '"Out of stock" badge fails WCAG AA contrast',
-        location: 'ProductDetail.tsx — stock badge', technique: 'Accessibility (Contrast)',
-        buggyCode: `style={{ color: '#c8c8c8', background: '#e0e0e0' }}`,
-        fixedCode: `style={{ color: '#5c5c5c', background: '#e0e0e0' }} // ~4.6:1 contrast ratio`,
-        explanation: 'Light gray text on a near-identical light gray background falls well under the 4.5:1 WCAG AA minimum.',
-      },
-      {
-        bugId: 'ECO-45', title: 'Quantity input has no associated label',
-        location: 'ProductDetail.tsx — quantity input', technique: 'Accessibility',
-        buggyCode: `<input type="number" value={qty} onChange={...} /> // no <label> at all`,
-        fixedCode: `<label htmlFor="qty">Quantity</label>\n<input id="qty" type="number" value={qty} onChange={...} />`,
-        explanation: 'A screen-reader user tabbing to this field hears no indication of what it controls.',
-      },
-      {
-        bugId: 'ECO-46', title: 'Related product cards are not keyboard-accessible',
-        location: 'ProductDetail.tsx — related products grid', technique: 'Accessibility',
-        buggyCode: `<div className="glass-panel" onClick={() => navigate(...)}>...</div>`,
-        fixedCode: `<button className="glass-panel" onClick={() => navigate(...)}>...</button>`,
-        explanation: 'A clickable <div> with no tabIndex/role is invisible to keyboard-only and screen-reader navigation.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [id, product, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-19', 'ECO-20', 'ECO-21', 'ECO-22', 'ECO-23', 'ECO-24', 'ECO-25', 'ECO-26', 'ECO-27', 'ECO-28', 'ECO-43', 'ECO-44', 'ECO-45', 'ECO-46'] });
+  }, [id, product, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   if (!product) return <div className="container">Product Not Found</div>;
 

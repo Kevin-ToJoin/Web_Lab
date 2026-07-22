@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS } from '../data/mockStore';
 
 export const Cart = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const {
     cart, updateQuantity, removeItem, subtotal, discount, discountApplied,
     discountCode, setDiscountCode, applyDiscount, tax, shipping, finalTotal,
@@ -76,83 +76,8 @@ export const Cart = () => {
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-02', title: 'Free shipping boundary off-by-one', location: 'CartContext.tsx — shipping calc',
-        technique: 'Equivalence Partitioning',
-        buggyCode: 'const shipping = subtotal > 100 ? 0 : 15.0;',
-        fixedCode: 'const shipping = subtotal >= 100 ? 0 : 15.0;',
-        explanation: 'Requirement is "$100 or more". Using > 100 charges shipping at exactly $100.',
-      },
-      {
-        bugId: 'ECO-06', title: 'Discount code is case-sensitive', location: 'CartContext.tsx — applyDiscount()',
-        technique: 'Equivalence Partitioning',
-        buggyCode: "if (discountCode === 'SAVE10') {",
-        fixedCode: "if (discountCode.trim().toUpperCase() === 'SAVE10') {",
-        explanation: 'Coupon codes should be case-insensitive; "save10" is wrongly rejected.',
-      },
-      {
-        bugId: 'ECO-13', title: 'Subtotal rounding error', location: 'CartContext.tsx — subtotal effect',
-        technique: 'Precision Error',
-        buggyCode: 'setSubtotal(cart.reduce((a, i) => a + price * i.quantity, 0));',
-        fixedCode: 'setSubtotal(Math.round(cart.reduce((a, i) => a + price * i.quantity, 0) * 100) / 100);',
-        explanation: 'Float accumulation produces values like 37.489999. Round to cents.',
-      },
-      {
-        bugId: 'ECO-14', title: 'Remove deletes wrong item', location: 'CartContext.tsx — removeItem()',
-        technique: 'Data Integrity',
-        buggyCode: 'const firstActiveIdx = prev.findIndex(i => i.quantity !== 0);\n// removes first active, not the one clicked',
-        fixedCode: 'return prev.map(item => item.id === id ? { ...item, quantity: 0 } : item);',
-        explanation: 'Removal targets the first active line instead of the clicked id. Match by id.',
-      },
-      {
-        bugId: 'ECO-29', title: 'Invalid discount code shows no error message',
-        location: 'CartContext.tsx — applyDiscount()', technique: 'Missing Functionality',
-        buggyCode: `const applyDiscount = () => {
-  if (discountCode === 'SAVE10') setDiscountApplied(true);
-  else setDiscountApplied(false); // no error feedback
-};`,
-        fixedCode: `else { setDiscountApplied(false); setDiscountError('Invalid discount code.'); }`,
-        explanation: 'Entering a bad code just silently fails to apply — there is no message telling the shopper why.',
-      },
-      {
-        bugId: 'ECO-53', title: 'Discount code with whitespace is rejected',
-        location: 'CartContext.tsx — applyDiscount()', technique: 'Boundary Value',
-        buggyCode: `if (discountCode === 'SAVE10') { ... } // " SAVE10 " fails the exact match`,
-        fixedCode: `if (discountCode.trim().toUpperCase() === 'SAVE10') { ... }`,
-        explanation: 'An accidental leading/trailing space silently defeats an otherwise-valid code.',
-      },
-      {
-        bugId: 'ECO-54', title: 'Discount stays applied after the cart empties out',
-        location: 'CartContext.tsx — discountApplied state', technique: 'Stale State',
-        buggyCode: `// discountApplied is never reset when cart.every(i => i.quantity === 0)`,
-        fixedCode: `useEffect(() => { if (subtotal === 0) setDiscountApplied(false); }, [subtotal]);`,
-        explanation: 'Emptying the cart doesn\'t clear an applied discount, so the next item added inherits a stale 10% off.',
-      },
-      {
-        bugId: 'ECO-55', title: 'Quantity +/- and Remove buttons have no accessible label',
-        location: 'Cart.tsx — line item controls', technique: 'Accessibility',
-        buggyCode: `<button onClick={() => updateQuantity(line.id, -1)}>-</button>\n<button onClick={() => removeItem(line.id)}><Trash2 size={16} /></button>`,
-        fixedCode: `<button aria-label={\`Decrease quantity of \${p.name}\`} onClick={...}>-</button>\n<button aria-label={\`Remove \${p.name}\`} onClick={...}><Trash2 aria-hidden="true" /></button>`,
-        explanation: 'A bare "-"/"+" or icon-only Trash2 button gives a screen reader no idea which line item it affects.',
-      },
-      {
-        bugId: 'ECO-56', title: 'Cart line item images have no alt text',
-        location: 'Cart.tsx — line item image', technique: 'Accessibility',
-        buggyCode: `<img src={p.image} style={{ ... }} /> // no alt`,
-        fixedCode: `<img src={p.image} alt={p.name} style={{ ... }} />`,
-        explanation: 'Screen-reader users get no description of which product each thumbnail represents.',
-      },
-      {
-        bugId: 'ECO-57', title: 'Quantity value has no aria-live region',
-        location: 'Cart.tsx — quantity display', technique: 'Accessibility',
-        buggyCode: `<span>{line.quantity}</span> // updates silently on +/- clicks`,
-        fixedCode: `<span aria-live="polite">{line.quantity}</span>`,
-        explanation: 'A screen-reader user clicking +/- gets no announcement that the quantity actually changed.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [cart, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-02', 'ECO-06', 'ECO-13', 'ECO-14', 'ECO-29', 'ECO-53', 'ECO-54', 'ECO-55', 'ECO-56', 'ECO-57'] });
+  }, [cart, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const activeItems = cart.filter(c => c.quantity > 0);
 

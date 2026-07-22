@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useCart } from '../context/CartContext';
 
 export const OrderHistory = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { orders } = useCart();
 
   useEffect(() => {
@@ -33,67 +33,8 @@ export const OrderHistory = () => {
       { method: 'GET', path: '/api/orders', description: 'Returns all past orders for the customer.', handler: () => ({ status: 200, body: orders }) },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'ECO-33', title: 'Order dates render as raw ISO timestamps',
-        location: 'OrderHistory.tsx — order list', technique: 'Content Bug',
-        buggyCode: `<span>{order.date}</span> // "2026-06-03T14:30:00Z"`,
-        fixedCode: `<span>{new Date(order.date).toLocaleDateString()}</span>`,
-        explanation: 'Order dates are displayed exactly as stored instead of being formatted for the viewer.',
-      },
-      {
-        bugId: 'ECO-34', title: 'Orders are not sorted most-recent-first',
-        location: 'OrderHistory.tsx — orders list', technique: 'Missing Functionality',
-        buggyCode: `{orders.map(order => (...))} // rendered in raw array order`,
-        fixedCode: `{[...orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(...)}`,
-        explanation: 'New orders are prepended to state, but nothing guarantees stored/seeded orders stay in date order — a mixed history can render out of sequence.',
-      },
-      {
-        bugId: 'ECO-35', title: 'Clicking an order row does nothing',
-        location: 'OrderHistory.tsx — order row', technique: 'Missing Functionality',
-        buggyCode: `<div className="glass-panel">{order.id}...</div> // no onClick, no detail view`,
-        fixedCode: `<div onClick={() => navigate(\`/ecommerce/confirmation/\${order.id}\`)}>...</div>`,
-        explanation: 'There is no way to drill into an order\'s line items from the history list.',
-      },
-      {
-        bugId: 'ECO-36', title: 'Order status is conveyed by color alone',
-        location: 'OrderHistory.tsx — status badge', technique: 'Accessibility',
-        buggyCode: `<span style={{ color: status === 'Delivered' ? 'var(--success)' : 'var(--text-muted)' }}>{status}</span>`,
-        fixedCode: `<span><StatusIcon status={status} aria-hidden="true" /> {status}</span>`,
-        explanation: 'While the status text itself is present (good), nothing else — icon, pattern — reinforces it for color-blind users relying on the badge styling alone in the mock UI.',
-      },
-      {
-        bugId: 'ECO-37', title: 'No link to Order History from the Storefront or header',
-        location: 'Storefront.tsx / header', technique: 'Missing Functionality',
-        buggyCode: `{/* header only has a cart icon — no "My Orders" link anywhere */}`,
-        fixedCode: `<button onClick={() => navigate('/ecommerce/orders')}>My Orders</button>`,
-        explanation: 'The route is fully implemented, but nothing in the normal navigation flow points to it.',
-      },
-      {
-        bugId: 'ECO-38', title: 'Seeded historical order totals don\'t match their line items',
-        location: 'CartContext.tsx — seeded orders', technique: 'Data Integrity',
-        buggyCode: `{ id: 'ORD-502', total: 40.85, items: [{ productId: 105, quantity: 1 }, { productId: 106, quantity: 1 }] }
-// French Press ($28.00) + Travel Tumbler ($18.75) = $46.75 before tax/shipping, not $40.85`,
-        fixedCode: `// Recompute totals from PRODUCTS + tax/shipping rules instead of hardcoding a total.`,
-        explanation: 'Cross-checking the DB viewer\'s Orders table against the Products table shows the stored total doesn\'t reconcile with the line items — a classic "trust but verify" data integrity check.',
-      },
-      {
-        bugId: 'ECO-61', title: 'No total order count or spending summary shown',
-        location: 'OrderHistory.tsx — page header', technique: 'Missing Functionality',
-        buggyCode: `<h1>Order History</h1>\n{/* no "3 orders, $142.50 total" summary anywhere */}`,
-        fixedCode: `<p>{orders.length} orders — ${orders.reduce((s, o) => s + o.total, 0).toFixed(2)} total spent</p>`,
-        explanation: 'A customer reviewing their history gets no at-a-glance summary, only a raw list.',
-      },
-      {
-        bugId: 'ECO-62', title: 'Empty order history has no call-to-action',
-        location: 'OrderHistory.tsx — empty state', technique: 'Missing Functionality',
-        buggyCode: `<div>No orders yet.</div> // dead end, no link back to shopping`,
-        fixedCode: `<div>No orders yet. <Link to="/ecommerce">Start shopping</Link></div>`,
-        explanation: 'A first-time customer with no orders lands on a dead end instead of being nudged back to the storefront.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [orders, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'ecommerce', bugIds: ['ECO-33', 'ECO-34', 'ECO-35', 'ECO-36', 'ECO-37', 'ECO-38', 'ECO-61', 'ECO-62'] });
+  }, [orders, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="container animate-fade-in" style={{ paddingBottom: '4rem' }}>
