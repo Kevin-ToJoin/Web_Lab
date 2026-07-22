@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "TestLab 101 — VaultAuth (Auth module)",
+    "description": "A deliberately-buggy authentication backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4010" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+
+    {
+      "name": "Signup — weak password accepted (AUTH-01/05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"weak@vault.io\",\n  \"password\": \"123\"\n}" },
+        "url": "{{baseUrl}}/signup"
+      }
+    },
+    {
+      "name": "Login — unknown email → 404 (enumeration) (AUTH-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@vault.io\",\n  \"password\": \"x\"\n}" },
+        "url": "{{baseUrl}}/login"
+      }
+    },
+    {
+      "name": "Login — wrong pw many times, no lockout (AUTH-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@vault.io\",\n  \"password\": \"wrong\"\n}" },
+        "url": "{{baseUrl}}/login"
+      }
+    },
+    { "name": "Me — expired token accepted (AUTH-03)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer EXPIRED-TOKEN" }], "url": "{{baseUrl}}/me" } },
+    { "name": "Me — 2FA not enforced (AUTH-12)", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer NOMFA-TOKEN" }], "url": "{{baseUrl}}/me" } },
+    {
+      "name": "2FA — leading-zero bypass, code 42519 vs 042519 (AUTH-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"NOMFA-TOKEN\",\n  \"code\": \"42519\"\n}" },
+        "url": "{{baseUrl}}/login/verify-2fa"
+      }
+    },
+    {
+      "name": "Logout — token still works afterwards (AUTH-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"token\": \"NOMFA-TOKEN\"\n}" },
+        "url": "{{baseUrl}}/logout"
+      }
+    },
+    {
+      "name": "Reset confirm — reuse the same code twice (AUTH-08)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"code\": \"RESET1\",\n  \"new_password\": \"whatever1\"\n}" },
+        "url": "{{baseUrl}}/reset/confirm"
+      }
+    },
+    {
+      "name": "Login — malformed JSON → 500 html (AUTH-10)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"email\": \"a\", " },
+        "url": "{{baseUrl}}/login"
+      }
+    },
+    { "name": "Session — missing token returns 200 null (AUTH-09)", "request": { "method": "GET", "url": "{{baseUrl}}/sessions/does-not-exist" } },
+    { "name": "Admin — no authz, users + plaintext pw (AUTH-11)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/users" } }
+  ]
+}

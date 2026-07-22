@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ShieldCheck, LogIn, KeyRound, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface StoredUser {
   email: string;
@@ -28,7 +28,7 @@ const SEED_USERS: StoredUser[] = [
 
 const AuthInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   // A simulated clock we can advance deterministically (avoids wall-clock flakiness).
   const [now, setNow] = useState(0);
@@ -301,66 +301,8 @@ A hardened sign-up, login, password-reset, and 2FA flow.
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'AUT-01', title: 'Password minimum length off-by-one', location: 'AuthApp.tsx — handleSignUp()', technique: 'Boundary Value',
-        buggyCode: 'if (suPass.length > 6) { /* passes */ }',
-        fixedCode: 'if (suPass.length < MIN_PASSWORD_LENGTH) { reject }',
-        explanation: 'Using > 6 accepts a 7-character password. Enforce length >= 8 (the policy minimum).' },
-      { bugId: 'AUT-02', title: 'Strength meter double-counts a rule', location: 'AuthApp.tsx — strength()', technique: 'Logic Error',
-        buggyCode: 'if (/[0-9]/.test(pw)) score++;\nif (/[0-9]/.test(pw)) score++;',
-        fixedCode: 'if (/[0-9]/.test(pw)) score++;\nif (/[^A-Za-z0-9]/.test(pw)) score++;',
-        explanation: 'The digit rule is counted twice, inflating the score. The second rule should test for a special character.' },
-      { bugId: 'AUT-03', title: 'Reset token never expires', location: 'AuthApp.tsx — handleConsumeReset()', technique: 'Logic Error',
-        buggyCode: 'void RESET_TOKEN_TTL; // expiry never checked',
-        fixedCode: 'if (now - resetToken.issuedAt > RESET_TOKEN_TTL) { setResetStatus("Token expired."); return; }',
-        explanation: 'The issued token is honoured forever. Reject it once its TTL has elapsed.' },
-      { bugId: 'AUT-04', title: 'Rate-limit lockout off-by-one', location: 'AuthApp.tsx — handleLogin()', technique: 'Boundary Value',
-        buggyCode: 'if (attempts > MAX_LOGIN_ATTEMPTS) { lock }',
-        fixedCode: 'if (attempts >= MAX_LOGIN_ATTEMPTS) { lock }',
-        explanation: 'Using > allows one extra attempt past the limit. Lock out at >= the maximum.' },
-      { bugId: 'AUT-05', title: 'Used reset token can be reused', location: 'AuthApp.tsx — handleConsumeReset()', technique: 'State Management',
-        buggyCode: 'void resetToken.used; // never invalidated',
-        fixedCode: 'if (resetToken.used) { reject }\nsetResetToken({ ...resetToken, used: true });',
-        explanation: 'The token is not marked used after a reset, so it can be replayed. Invalidate it on first use.' },
-      { bugId: 'AUT-06', title: 'Email regex too permissive', location: 'AuthApp.tsx — isValidEmail()', technique: 'Input Validation',
-        buggyCode: '/^[^@\\s]+@[^@\\s]+$/',
-        fixedCode: '/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/',
-        explanation: 'The pattern accepts "a@b" with no dotted domain. Require a proper local@domain.tld form.' },
-      { bugId: 'AUT-07', title: '2FA accepts any / empty code', location: 'AuthApp.tsx — handleVerify2fa()', technique: 'Input Validation',
-        buggyCode: 'void twoFaInput; // never compared\nsetTwoFaStatus("verified");',
-        fixedCode: 'if (twoFaInput !== issuedCode) { setTwoFaStatus("Invalid code."); return; }',
-        explanation: 'The 2FA code is never checked, so any or no code grants access. Compare it to the issued code.' },
-      { bugId: 'AUT-08', title: 'Confirm-password mismatch not caught', location: 'AuthApp.tsx — handleSignUp()', technique: 'Logic Error',
-        buggyCode: 'void suConfirm; // never compared',
-        fixedCode: 'if (suPass !== suConfirm) { setSuStatus("Passwords do not match."); return; }',
-        explanation: 'A mismatched confirmation passes silently. Reject sign-up when the two fields differ.' },
-      { bugId: 'AUT-09', title: 'Lockout counter resets on refresh', location: 'AuthApp.tsx — attempts state', technique: 'State Management',
-        buggyCode: 'const [attempts, setAttempts] = useState(0);',
-        fixedCode: 'persist failed attempts per email (LoginAttempts store) and rehydrate on mount',
-        explanation: 'The counter is in-memory and reseeds to 0 on refresh, so a reload clears the lockout. Persist it.' },
-      { bugId: 'AUT-10', title: 'Email case-comparison inconsistent', location: 'AuthApp.tsx — handleSignUp() vs handleLogin()', technique: 'Logic Error',
-        buggyCode: 'signup: u.email === suEmail\nlogin: u.email.toLowerCase() === liEmail.toLowerCase()',
-        fixedCode: 'compare case-insensitively in BOTH places',
-        explanation: 'Sign-up compares case-sensitively while login is case-insensitive, letting a differently-cased email create a duplicate account.' },
-      { bugId: 'AUT-11', title: 'Common-password blocklist bypassable', location: 'AuthApp.tsx — isCommonPassword()', technique: 'Logic Error',
-        buggyCode: 'COMMON_PASSWORDS.includes(pw)',
-        fixedCode: 'COMMON_PASSWORDS.includes(pw.toLowerCase())',
-        explanation: 'The list is lowercase but the check is case-sensitive, so "Password" is not blocked. Normalise case first.' },
-      { bugId: 'AUT-12', title: 'Login leaks whether email exists', location: 'AuthApp.tsx — handleLogin()', technique: 'Logic Error',
-        buggyCode: '!user -> "No account found"\nbad pw -> "Incorrect password"',
-        fixedCode: 'both cases -> "Invalid email or password."',
-        explanation: 'Distinct messages let an attacker enumerate valid accounts. Return one generic error for both failures.' },
-      { bugId: 'AUT-13', title: 'Session token has no expiry', location: 'AuthApp.tsx — handleLogin()', technique: 'Boundary Value',
-        buggyCode: 'setSession({ email, issuedAt: now });',
-        fixedCode: 'setSession({ email, issuedAt: now, expiresAt: now + SESSION_TTL });',
-        explanation: 'The session is stamped without an expiry, so it never times out. Add and enforce an expiry.' },
-      { bugId: 'AUT-14', title: 'Strength meter rewards length alone', location: 'AuthApp.tsx — strength()', technique: 'Logic Error',
-        buggyCode: 'if (pw.length >= 12) return { score: 4, label: "Strong" };',
-        fixedCode: 'derive strength from character variety, not length by itself',
-        explanation: '"aaaaaaaaaaaa" is labelled Strong purely for its length. Strength must require character variety.' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'auth', bugIds: ['AUT-01', 'AUT-02', 'AUT-03', 'AUT-04', 'AUT-05', 'AUT-06', 'AUT-07', 'AUT-08', 'AUT-09', 'AUT-10', 'AUT-11', 'AUT-12', 'AUT-13', 'AUT-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const inputStyle = { marginBottom: '1rem' };
 
@@ -490,7 +432,15 @@ A hardened sign-up, login, password-reset, and 2FA flow.
 };
 
 export const AuthApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'VaultAuth Security API',
+      port: 4010,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/auth-docker-compose.yml`,
+    }}
+  >
     <AuthInner />
   </QALayout>
 );
