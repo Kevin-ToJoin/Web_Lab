@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "TestLab 101 — CertifyHub (Exam module)",
+    "description": "A deliberately-buggy online-exam backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4008" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Exams — list", "request": { "method": "GET", "url": "{{baseUrl}}/exams" } },
+
+    { "name": "Questions — LEAK correct_index (EXAM-06)", "request": { "method": "GET", "url": "{{baseUrl}}/exams/1/questions" } },
+
+    {
+      "name": "Submit — exactly 60% but fails (> vs >=) (EXAM-01/02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": 7,\n  \"started_at\": \"2026-07-22T10:00:00\",\n  \"answers\": { \"1\": 0, \"2\": 2, \"3\": 1, \"4\": 3, \"5\": 0 }\n}" },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    {
+      "name": "Submit — blanks penalized by negative marking (EXAM-03/11)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": 7,\n  \"started_at\": \"2026-07-22T10:00:00\",\n  \"answers\": { \"1\": 1 }\n}" },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    {
+      "name": "Submit — past the 30-min window, still scored (EXAM-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": 7,\n  \"started_at\": \"2000-01-01T00:00:00\",\n  \"answers\": { \"1\": 0 }\n}" },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    {
+      "name": "Submit — out-of-range answer index (EXAM-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": 7,\n  \"started_at\": \"2026-07-22T10:00:00\",\n  \"answers\": { \"1\": 99 }\n}" },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    {
+      "name": "Submit — repeat to exceed max_attempts / duplicate (EXAM-05/10)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"user_id\": 7,\n  \"started_at\": \"2026-07-22T10:00:00\",\n  \"answers\": { \"1\": 0 }\n}" },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    {
+      "name": "Submit — malformed JSON → 500 html (EXAM-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"user_id\": 7, " },
+        "url": "{{baseUrl}}/exams/1/submit"
+      }
+    },
+    { "name": "Attempt — missing id returns 200 null (EXAM-08)", "request": { "method": "GET", "url": "{{baseUrl}}/attempts/9999" } },
+    { "name": "Admin — no authz, all results (EXAM-12)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/results" } }
+  ]
+}

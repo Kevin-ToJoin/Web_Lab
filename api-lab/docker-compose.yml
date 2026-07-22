@@ -155,3 +155,15 @@ services:
       - "4007:4007"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Exam module (CertifyHub): scoring, cutoffs, negative marking, timing ──
+  exam-api:
+    build: ./services/exam
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4008"
+      DATABASE_URL: postgres://lab:lab@db:5432/exam
+    ports:
+      - "4008:4008"
+    depends_on:
+      db: { condition: service_healthy }
