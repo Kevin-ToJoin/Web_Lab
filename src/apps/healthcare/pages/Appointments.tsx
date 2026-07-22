@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useHealth, TIME_SLOTS, SEED_APPOINTMENTS } from '../context/HealthContext';
 import { HealthChrome } from './HealthChrome';
 
 export const Appointments = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { bookings, bookingStatus, setBookingStatus, bookSlot } = useHealth();
 
   const [date, setDate] = useState('');
@@ -64,59 +64,8 @@ URL: \`/healthcare/appointments\`
       },
     ]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'HLT-02', title: 'Booking accepts past dates', location: 'HealthContext.tsx — bookSlot()',
-        technique: 'Date Validation',
-        buggyCode: '// no past-date check\nsetBookings(prev => [...prev, { date, time }]);',
-        fixedCode: 'const today = new Date(); today.setHours(0,0,0,0);\nif (parsed < today) { setBookingStatus("Error: date in the past."); return; }',
-        explanation: 'Appointments in the past are accepted. Reject dates earlier than today.',
-      },
-      {
-        bugId: 'HLT-03', title: 'Feb 29 in a leap year throws', location: 'HealthContext.tsx — bookSlot()',
-        technique: 'Edge Case',
-        buggyCode: "if (mStr === '02' && dStr === '29' && isLeapYear(year)) { throw ... }",
-        fixedCode: "if (mStr === '02' && dStr === '29' && !isLeapYear(year)) { /* reject only non-leap */ }",
-        explanation: 'Feb 29 is valid in a leap year; the guard rejects the valid case (and crashes the app into the error boundary). Invert to !isLeapYear.',
-      },
-      {
-        bugId: 'HLT-07', title: 'Double-booking allowed', location: 'HealthContext.tsx — bookSlot()',
-        technique: 'Logic Error',
-        buggyCode: 'setBookings(prev => [...prev, { date, time }]);',
-        fixedCode: 'if (bookings.some(b => b.date === date && b.time === time)) {\n  setBookingStatus("Error: slot already booked."); return;\n}',
-        explanation: 'The same date+time can be booked repeatedly — and the seeded Appointments table (ids 901/902) shows it already happened in production.',
-      },
-      {
-        bugId: 'HLT-09', title: 'Ambiguous DD/MM vs MM/DD display', location: 'HealthContext.tsx — bookSlot()',
-        technique: 'Edge Case',
-        buggyCode: 'const ambiguous = `${parsed.getMonth()+1}/${parsed.getDate()}/${parsed.getFullYear()}`;',
-        fixedCode: 'const iso = date; // keep unambiguous ISO YYYY-MM-DD for display',
-        explanation: 'Reformatting to M/D/YYYY makes 03/04 ambiguous. Display the ISO date to avoid locale confusion.',
-      },
-      {
-        bugId: 'HLT-11', title: 'Timezone shifts to previous day', location: 'HealthContext.tsx — bookSlot()',
-        technique: 'Timezone Error',
-        buggyCode: 'const parsed = new Date(date); // midnight UTC\nparsed.toLocaleDateString();',
-        fixedCode: "const [y,m,d] = date.split('-').map(Number);\nconst parsed = new Date(y, m - 1, d); // local midnight",
-        explanation: 'new Date("YYYY-MM-DD") is UTC midnight; in negative offsets it renders the prior day. Build a local date.',
-      },
-      {
-        bugId: 'HLT-16', title: 'Weekend dates accepted despite Mon-Fri clinic hours',
-        location: 'HealthContext.tsx — bookSlot()', technique: 'Business Rule',
-        buggyCode: '// requirements + Clinic_Hours say Monday-Friday, but no weekday check exists',
-        fixedCode: 'const day = parsed.getDay();\nif (day === 0 || day === 6) { setBookingStatus("Error: clinic closed on weekends."); return; }',
-        explanation: 'The stated business rule (and the Clinic_Hours table) says Mon–Fri, yet Saturday and Sunday bookings sail through.',
-      },
-      {
-        bugId: 'HLT-17', title: 'No way to cancel a booked appointment',
-        location: 'Appointments.tsx / HealthContext.tsx', technique: 'Missing Functionality',
-        buggyCode: '// bookings list renders read-only; no cancel handler exists anywhere',
-        fixedCode: 'const cancelBooking = (i) => setBookings(prev => prev.filter((_, idx) => idx !== i));\n<button onClick={() => cancelBooking(i)}>Cancel</button>',
-        explanation: 'Once a slot is booked (even by accident), there is no UI to release it — the list only ever grows.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [bookings, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'healthcare', bugIds: ['HLT-02', 'HLT-03', 'HLT-07', 'HLT-09', 'HLT-11', 'HLT-16', 'HLT-17'] });
+  }, [bookings, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <HealthChrome>
