@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { CheckCircle, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useRegistration, USERS_TABLE } from '../context/RegistrationContext';
 import { WizardChrome } from './WizardChrome';
 
 export const StepReview = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const {
     firstName, lastName, age, username, email, phone, zip,
     agreedTerms, setAgreedTerms, reviewEmail, errors, setErrors, registerAccount,
@@ -42,45 +42,8 @@ URL: \`/registration/review\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'REG-07', title: 'Review shows stale email after going back', location: 'StepAccount.tsx — reviewEmail snapshot',
-        technique: 'Stale State',
-        buggyCode: 'setReviewEmail(email); // snapshot taken once on Next\n... value={reviewEmail}',
-        fixedCode: 'Read live state in Review: value={email} (drop the snapshot).',
-        explanation: 'The snapshot desyncs after the user edits email on Step 2. Render live state.',
-      },
-      {
-        bugId: 'REG-10', title: 'Terms checkbox is not required', location: 'StepReview.tsx — handleSubmit()',
-        technique: 'Logic Bug',
-        buggyCode: 'const handleSubmit = () => { registerAccount(); navigate("/registration/success"); };',
-        fixedCode: 'const handleSubmit = () => {\n  if (!agreedTerms) { setErrors({ terms: "You must accept the terms." }); return; }\n  registerAccount(); navigate("/registration/success");\n};',
-        explanation: 'Submission ignores agreedTerms. Block submit until the box is checked.',
-      },
-      {
-        bugId: 'REG-12', title: 'Step progress indicator wrong after back', location: 'StepAccount/StepReview — handleBack() / progressStep',
-        technique: 'Stale State',
-        buggyCode: 'const handleBack = () => { navigate("/registration/account"); }; // progressStep unchanged',
-        fixedCode: 'Derive progress from the current route instead of separate state.',
-        explanation: 'progressStep only advances; it is never decremented, so the bar stays ahead after going Back. Derive it from the route.',
-      },
-      {
-        bugId: 'REG-25', title: 'Review is reachable by URL with an empty wizard', location: 'index.tsx routes / StepReview.tsx',
-        technique: 'Routing Guard',
-        buggyCode: '<Route path="review" element={<StepReview />} />\n// no guard — renders "(empty)" rows and still lets you submit',
-        fixedCode: 'if (!email || !username) return <Navigate to="/registration" replace />;',
-        explanation: 'Deep-linking to /registration/review with no prior data shows empty values and still allows Create Account to succeed.',
-      },
-      {
-        bugId: 'REG-26', title: 'Double-click on Create Account registers twice', location: 'StepReview.tsx — submit button',
-        technique: 'Race Condition',
-        buggyCode: '<button onClick={handleSubmit}>Create Account</button>\n// no disabled/submitting state',
-        fixedCode: 'const [submitting, setSubmitting] = useState(false);\n<button disabled={submitting} onClick={() => { setSubmitting(true); handleSubmit(); }}>',
-        explanation: 'The button stays clickable during submission — a fast double-click creates two accounts (see Registrations_Log on the Success page).',
-      },
-    ];
-    setSolutions(solutions);
-  }, [firstName, lastName, email, reviewEmail, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'registration', bugIds: ['REG-07', 'REG-10', 'REG-12', 'REG-25', 'REG-26'] });
+  }, [firstName, lastName, email, reviewEmail, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleBack = () => {
     setErrors({});
