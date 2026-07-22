@@ -143,3 +143,15 @@ services:
       - "4006:4006"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Delivery module (QuickBite): zones, minimums, promos, tip math ──
+  delivery-api:
+    build: ./services/delivery
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4007"
+      DATABASE_URL: postgres://lab:lab@db:5432/delivery
+    ports:
+      - "4007:4007"
+    depends_on:
+      db: { condition: service_healthy }

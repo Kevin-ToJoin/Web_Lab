@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ShoppingCart, Utensils, Truck, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface MenuItem {
   id: string;
@@ -45,7 +45,7 @@ interface Summary {
 
 const DeliveryInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [zip, setZip] = useState('');
@@ -234,66 +234,8 @@ Customers build a cart, choose a delivery ZIP and time-slot, apply a promo, pick
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'DEL-01', title: 'Out-of-zone ZIP accepted', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Missing Validation',
-        buggyCode: 'void ALLOWED_ZONES; // never checked',
-        fixedCode: 'if (!ALLOWED_ZONES.includes(zip)) { setStatus("We do not deliver to that ZIP."); return; }',
-        explanation: 'The delivery ZIP is never validated against the serviceable zones, so an out-of-zone address checks out.' },
-      { bugId: 'DEL-02', title: 'Minimum order not enforced', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Boundary Value',
-        buggyCode: 'void MIN_ORDER; // never checked',
-        fixedCode: 'if (subtotal < MIN_ORDER) { setStatus(`$${MIN_ORDER} minimum order.`); return; }',
-        explanation: 'Orders below the $15 food-subtotal minimum still check out. Reject subtotals under the minimum.' },
-      { bugId: 'DEL-03', title: 'Free-delivery threshold off-by-one', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Boundary Value',
-        buggyCode: 'const fee = basis > FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;',
-        fixedCode: 'const fee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;',
-        explanation: 'A $30 order (exactly at the threshold) is still charged the fee because the check uses strict >. Use >=.' },
-      { bugId: 'DEL-04', title: 'Promo code stacks / applies twice', location: 'DeliveryApp.tsx — applyPromo()', technique: 'Logic Error',
-        buggyCode: 'setAppliedPromos(prev => [...prev, code]); // no dedupe',
-        fixedCode: 'if (appliedPromos.includes(code)) { setStatus("Promo already applied."); return; }',
-        explanation: 'The same promo can be applied repeatedly, adding the discount each time. Guard against re-applying a code.' },
-      { bugId: 'DEL-05', title: 'Tip computed on grand total', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Logic Error',
-        buggyCode: 'const tip = grandBeforeTip * tipPctNum; // incl. fee + tax',
-        fixedCode: 'const tip = subtotal * tipPctNum; // food subtotal only',
-        explanation: 'The tip percentage is taken on subtotal + delivery fee + tax. It should be based on the food subtotal only.' },
-      { bugId: 'DEL-06', title: 'Quantity has no cap or floor', location: 'DeliveryApp.tsx — setQty()', technique: 'Boundary Value',
-        buggyCode: 'setCart(... qty: isNaN(qty) ? 0 : qty);',
-        fixedCode: 'const clamped = Math.max(1, Math.min(99, qty || 1));',
-        explanation: 'A quantity of 9999 or a negative value is accepted. Clamp quantity to the 1..99 range.' },
-      { bugId: 'DEL-07', title: 'Past delivery slot accepted', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Date/Time',
-        buggyCode: 'void slot; // slot never compared to now',
-        fixedCode: 'if (new Date(slot) <= new Date()) { setStatus("Choose a future slot."); return; }',
-        explanation: 'A delivery time-slot in the past is accepted. Reject slots that are not in the future.' },
-      { bugId: 'DEL-08', title: 'Tax applied before discount', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Logic Error',
-        buggyCode: 'const tax = subtotal * TAX_RATE; // pre-discount',
-        fixedCode: 'const tax = (subtotal - discount) * TAX_RATE; // post-discount',
-        explanation: 'Tax is charged on the full subtotal before the promo discount. Tax should apply to the discounted amount.' },
-      { bugId: 'DEL-09', title: 'Add works for out-of-stock item', location: 'DeliveryApp.tsx — addToCart()', technique: 'UI Bug',
-        buggyCode: 'void item.inStock; // add anyway',
-        fixedCode: 'if (!item.inStock) return; // and disable the button',
-        explanation: 'The Add button adds a sold-out item to the cart. Guard the handler and disable the button when out of stock.' },
-      { bugId: 'DEL-10', title: 'Operating-hours drift by timezone', location: 'DeliveryApp.tsx — isWithinHours()', technique: 'Timezone Error',
-        buggyCode: 'const now = new Date(new Date().toISOString()); now.getHours();',
-        fixedCode: 'const h = new Date().getHours(); // local wall-clock',
-        explanation: 'Round-tripping through an ISO string reintroduces UTC parsing, so getHours() drifts by the local offset.' },
-      { bugId: 'DEL-11', title: 'Tip not rounded to cents', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Logic Error',
-        buggyCode: 'const tip = grandBeforeTip * tipPctNum; // raw float',
-        fixedCode: 'const tip = Math.round(subtotal * tipPctNum * 100) / 100;',
-        explanation: 'The tip is a raw float, so floating-point drift leaks into the displayed total. Round to cents.' },
-      { bugId: 'DEL-12', title: 'Empty cart can place an order', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Missing Validation',
-        buggyCode: 'void cart.length; // no empty-cart guard',
-        fixedCode: 'if (cart.length === 0) { setStatus("Your cart is empty."); return; }',
-        explanation: 'An empty cart produces a $0 confirmed order. Require at least one item to place an order.' },
-      { bugId: 'DEL-13', title: 'Tip counts toward free-delivery', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Boundary Value',
-        buggyCode: 'const thresholdBasis = subtotal + subtotal * tipPctNum;',
-        fixedCode: 'const thresholdBasis = subtotal; // tip excluded',
-        explanation: 'A large tip pushes a small food order past the free-delivery threshold. The threshold should use the food subtotal only.' },
-      { bugId: 'DEL-14', title: 'ETA is always 30 min', location: 'DeliveryApp.tsx — placeOrder()', technique: 'Logic Error',
-        buggyCode: "const eta = '30 min'; // hardcoded",
-        fixedCode: 'const eta = etaForZone(zip); // varies by distance/zone',
-        explanation: 'The estimated delivery time is hardcoded regardless of distance or zone. Compute the ETA from the destination.' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'delivery', bugIds: ['DEL-01', 'DEL-02', 'DEL-03', 'DEL-04', 'DEL-05', 'DEL-06', 'DEL-07', 'DEL-08', 'DEL-09', 'DEL-10', 'DEL-11', 'DEL-12', 'DEL-13', 'DEL-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const inputStyle = { marginBottom: '1rem' };
 
@@ -416,7 +358,15 @@ Customers build a cart, choose a delivery ZIP and time-slot, apply a promo, pick
 };
 
 export const DeliveryApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'QuickBite Delivery API',
+      port: 4007,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/delivery-docker-compose.yml`,
+    }}
+  >
     <DeliveryInner />
   </QALayout>
 );

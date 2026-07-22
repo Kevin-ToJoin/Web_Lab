@@ -1,0 +1,41 @@
+# TestLab 101 — Module 8 (Food Delivery / QuickBite) — beginner setup.
+#
+# This is the ONLY file you need. It PULLS pre-built images (no source code, no
+# Git, no build) and starts the whole environment with one command:
+#
+#   docker compose up
+#
+# Then open http://localhost:4007/_lab/requirements  (the API)
+#      and  http://localhost:8080                     (Adminer — browse the DB)
+#
+# Stop with Ctrl+C, then:  docker compose down
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: delivery       # the delivery-api creates its own tables on boot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d delivery"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  delivery-api:
+    image: ghcr.io/kevin-tojoin/web_lab/delivery-api:latest
+    pull_policy: always
+    environment:
+      PORT: "4007"
+      DATABASE_URL: postgres://lab:lab@db:5432/delivery
+    ports:
+      - "4007:4007"
+    depends_on:
+      db: { condition: service_healthy }
+
+  adminer:
+    image: adminer:4
+    ports:
+      - "8080:8080"
+    depends_on:
+      db: { condition: service_healthy }
