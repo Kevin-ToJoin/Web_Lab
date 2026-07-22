@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { waitForDb } from './db.js';
+import { initDb } from './initDb.js';
 import { accountsRouter } from './routes/accounts.js';
 import { transfersRouter } from './routes/transfers.js';
 import { adminRouter } from './routes/admin.js';
@@ -36,6 +37,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = Number(process.env.PORT) || 4001;
 
 waitForDb()
+  .then(initDb)
   .then(() => app.listen(PORT, () => console.log(`Vault Bank API listening on :${PORT}`)))
   .catch(err => {
     console.error('Failed to reach database:', err);

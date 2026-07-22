@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { waitForDb } from './db.js';
+import { initDb } from './initDb.js';
 import { authRouter } from './routes/auth.js';
 import { productsRouter } from './routes/products.js';
 import { ordersRouter } from './routes/orders.js';
@@ -40,6 +41,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = Number(process.env.PORT) || 4000;
 
 waitForDb()
+  .then(initDb)
   .then(() => {
     app.listen(PORT, () => console.log(`OrderFlow API listening on :${PORT}`));
   })

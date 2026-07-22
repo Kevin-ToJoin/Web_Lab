@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { waitForDb } from './db.js';
+import { initDb } from './initDb.js';
 import { signupRouter } from './routes/signup.js';
 import { verifyRouter } from './routes/verify.js';
 import { loginRouter } from './routes/login.js';
@@ -34,6 +35,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 const PORT = Number(process.env.PORT) || 4003;
 
 waitForDb()
+  .then(initDb)
   .then(() => app.listen(PORT, () => console.log(`DevPortal Registration API listening on :${PORT}`)))
   .catch(err => {
     console.error('Failed to reach database:', err);

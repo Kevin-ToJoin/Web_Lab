@@ -22,12 +22,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      # 00 creates the per-module databases; each module mounts its own schema.
+      # 00 creates the per-module databases; every module self-applies its own
+      # schema on startup via src/initDb.ts (idempotent) — no schema mounts.
       - ./db/00-databases.sql:/docker-entrypoint-initdb.d/00-databases.sql:ro
-      - ./services/ecommerce/schema.sql:/docker-entrypoint-initdb.d/10-ecommerce.sql:ro
-      - ./services/bank/schema.sql:/docker-entrypoint-initdb.d/20-bank.sql:ro
-      - ./services/registration/schema.sql:/docker-entrypoint-initdb.d/40-registration.sql:ro
-      # catalog self-applies its schema on startup (src/initDb.ts) — no mount needed.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
       interval: 3s

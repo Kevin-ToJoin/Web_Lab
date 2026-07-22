@@ -11,7 +11,15 @@ import { VerifyEmail } from './pages/VerifyEmail';
 // and /registration/review are freely reachable by URL with an empty wizard.
 export const RegistrationApp = () => (
   <RegistrationProvider>
-    <QALayout>
+    <QALayout
+      showDataTabs={false}
+      dockerLab={{
+        name: 'DevPortal Registration API',
+        port: 4003,
+        bugCount: 12,
+        composeUrl: `${import.meta.env.BASE_URL}labs/registration-docker-compose.yml`,
+      }}
+    >
       <Routes>
         <Route path="/" element={<StepPersonal />} />
         <Route path="account" element={<StepAccount />} />
