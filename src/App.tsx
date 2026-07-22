@@ -22,12 +22,17 @@ import { BugReporterButton } from './components/BugReporter/BugReporterButton';
 import { BugReporterModal } from './components/BugReporter/BugReporterModal';
 import { MyReportsPanel } from './components/BugReporter/MyReportsPanel';
 import { knownBugs, TOTAL_BUGS } from './data/knownBugs';
+import { LanguageProvider, useI18n } from './i18n/LanguageContext';
+import { LanguageToggle } from './i18n/LanguageToggle';
 
 // --- Main Menu ---
 const MainMenu = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const bugCountFor = (id: string) => knownBugs.filter(b => b.appId === id).length;
+  // "Levels 1–2" / "Level 10" → localized ("Niveles 1–2" / "Nivel 10").
+  const localizeLevel = (level: string) => level.replace('Levels', t('hub.levels')).replace('Level', t('hub.level'));
 
   const apps = [
     {
@@ -154,14 +159,16 @@ const MainMenu = () => {
 
   return (
     <div className="container animate-fade-in">
-      <header style={{ textAlign: 'center', marginBottom: '3rem', marginTop: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '1rem' }}>
+        <LanguageToggle />
+      </div>
+      <header style={{ textAlign: 'center', marginBottom: '3rem', marginTop: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
           <Bug size={48} color="var(--primary)" />
           <h1 style={{ fontSize: '3rem' }} className="text-glow">TestLab <span style={{ color: 'var(--primary)' }}>101</span></h1>
         </div>
         <p style={{ fontSize: '1.25rem', maxWidth: '600px', margin: '0 auto', color: 'var(--text-muted)' }}>
-          A professional sandbox for QA engineers. Choose an environment and discover
-          intentionally injected bugs — from trivial to impossible.
+          {t('hub.subtitle')}
         </p>
         <p style={{
           display: 'inline-flex',
@@ -176,18 +183,18 @@ const MainMenu = () => {
           border: '1px solid color-mix(in srgb, var(--primary) 35%, transparent)',
           borderRadius: 'var(--radius-full)'
         }}>
-          🐛 {TOTAL_BUGS} intentionally injected bugs across {apps.length} apps
+          {t('hub.badge', { n: TOTAL_BUGS, apps: apps.length })}
         </p>
       </header>
 
       {/* How to use */}
       <div className="glass-panel" style={{ padding: '1.5rem 2rem', marginBottom: '2.5rem', borderLeft: '3px solid var(--primary)' }}>
-        <h3 style={{ marginBottom: '0.75rem', color: 'var(--primary)' }}>How to use this lab</h3>
+        <h3 style={{ marginBottom: '0.75rem', color: 'var(--primary)' }}>{t('hub.howTitle')}</h3>
         <ol style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          <li>Pick an environment below — start with <strong style={{ color: 'var(--text-primary)' }}>Product Catalog</strong> if you're new.</li>
-          <li>Use the <strong style={{ color: 'var(--text-primary)' }}>QA Inspector</strong> panel on the right to read requirements and inspect data.</li>
-          <li>Find the bugs by testing the UI against the listed acceptance criteria.</li>
-          <li>Document each bug as you would in a real bug report (title, steps, expected vs. actual).</li>
+          <li>{t('hub.how1')}</li>
+          <li>{t('hub.how2')}</li>
+          <li>{t('hub.how3')}</li>
+          <li>{t('hub.how4')}</li>
         </ol>
       </div>
 
@@ -218,21 +225,21 @@ const MainMenu = () => {
                   borderRadius: 'var(--radius-full)',
                   border: `1px solid color-mix(in srgb, ${app.difficultyColor} 40%, transparent)`
                 }}>
-                  {app.difficulty}
+                  {t(`diff.${app.difficulty}`)}
                 </span>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-disabled)', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--radius-full)' }}>
-                  {app.level}
+                  {localizeLevel(app.level)}
                 </span>
               </div>
             </div>
-            <h3>{app.title}</h3>
-            <p style={{ flexGrow: 1, color: 'var(--text-muted)' }}>{app.description}</p>
+            <h3>{t(`app.${app.id}.title`)}</h3>
+            <p style={{ flexGrow: 1, color: 'var(--text-muted)' }}>{t(`app.${app.id}.desc`)}</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', color: 'var(--primary)', fontWeight: 500 }}>
-                Start Testing <ChevronRight size={18} />
+                {t('hub.start')} <ChevronRight size={18} />
               </div>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-disabled)', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--radius-full)' }}>
-                🐛 {bugCountFor(app.id)} bugs
+                {t('hub.bugs', { n: bugCountFor(app.id) })}
               </span>
             </div>
           </div>
@@ -305,6 +312,7 @@ const ROUTER_BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
 
 function App() {
   return (
+    <LanguageProvider>
     <BugReporterProvider>
       <Router basename={ROUTER_BASENAME}>
         <Suspense fallback={
@@ -380,6 +388,7 @@ function App() {
         <MyReportsPanel />
       </Router>
     </BugReporterProvider>
+    </LanguageProvider>
   );
 }
 

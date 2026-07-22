@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQAPanel, type BugSolution } from './QAContext';
 import { IstqbTags } from './IstqbTags';
-import { BookOpen, Database, TerminalSquare, Send, Lightbulb, Lock } from 'lucide-react';
+import { useI18n } from '../i18n/LanguageContext';
+import { LanguageToggle } from '../i18n/LanguageToggle';
+import { BookOpen, Database, TerminalSquare, Send, Lightbulb, Lock, Bug } from 'lucide-react';
 
 // ─── Minimal Markdown Renderer ────────────────────────────────────────────────
 // Handles: ## h2, ### h3, **bold**, `inline code`, - list items, ```code blocks```
@@ -99,6 +101,7 @@ const SolutionCard = ({ sol }: { sol: BugSolution }) => (
 // ─── Solutions lock screen ────────────────────────────────────────────────────
 const SolutionsLock = () => {
   const { unlockSolutions } = useQAPanel();
+  const { t } = useI18n();
   const [pwd, setPwd] = useState('');
   const [err, setErr] = useState(false);
 
@@ -110,27 +113,26 @@ const SolutionsLock = () => {
   return (
     <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
       <Lock size={40} color="var(--text-disabled)" style={{ marginBottom: '1rem' }} />
-      <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Solutions Locked</h3>
+      <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>{t('lock.title')}</h3>
       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-        Try to find the bugs yourself first!<br />Enter the unlock code from your instructor when ready.
+        {t('lock.desc')}
       </p>
       <div style={{ display: 'flex', gap: '0.5rem', maxWidth: '260px', margin: '0 auto' }}>
         <input
           type="password"
           className="input-field"
-          placeholder="Unlock code"
+          placeholder={t('lock.placeholder')}
           value={pwd}
           onChange={e => { setPwd(e.target.value); setErr(false); }}
           onKeyDown={e => { if (e.key === 'Enter') handleUnlock(); }}
           style={{ flex: 1, border: err ? '1px solid var(--danger)' : undefined }}
-          aria-label="Solutions unlock code"
+          aria-label={t('lock.placeholder')}
         />
-        <button type="button" className="btn btn-primary" style={{ padding: '0.75rem 1rem' }} onClick={handleUnlock}>
+        <button type="button" className="btn btn-primary" style={{ padding: '0.75rem 1rem' }} onClick={handleUnlock} aria-label={t('lock.button')}>
           <Lightbulb size={16} aria-hidden="true" />
         </button>
       </div>
-      {err && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>Incorrect code.</p>}
-      <p style={{ color: 'var(--text-disabled)', fontSize: '0.72rem', marginTop: '1.5rem' }}>Hint: the code is a single English word meaning "to expose".</p>
+      {err && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>{t('lock.wrong')}</p>}
     </div>
   );
 };
@@ -153,6 +155,7 @@ export interface DockerLabInfo {
 // the real backend lab.
 export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataTabs?: boolean; dockerLab?: DockerLabInfo }) => {
   const [activeTab, setActiveTab] = useState<'reqs' | 'db' | 'api' | 'docker' | 'solutions'>('reqs');
+  const { t } = useI18n();
   const { requirementsMarkdown, dbTables, apiEndpoints, solutions, solutionsUnlocked } = useQAPanel();
   const [apiResponses, setApiResponses] = useState<Record<number, string>>({});
   // Track the live request-body text per endpoint so the handler sees edits.
@@ -184,20 +187,26 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
   };
 
   const tabs = [
-    { id: 'reqs'      as const, label: 'Reqs',      icon: <BookOpen size={14} aria-hidden="true" /> },
+    { id: 'reqs'      as const, label: t('tab.reqs'),      icon: <BookOpen size={14} aria-hidden="true" /> },
     ...(showDataTabs ? [
-      { id: 'db'  as const, label: 'DB',  icon: <Database size={14} aria-hidden="true" /> },
-      { id: 'api' as const, label: 'API', icon: <TerminalSquare size={14} aria-hidden="true" /> },
+      { id: 'db'  as const, label: t('tab.db'),  icon: <Database size={14} aria-hidden="true" /> },
+      { id: 'api' as const, label: t('tab.api'), icon: <TerminalSquare size={14} aria-hidden="true" /> },
     ] : []),
     ...(dockerLab ? [
-      { id: 'docker' as const, label: 'API Lab', icon: <TerminalSquare size={14} aria-hidden="true" /> },
+      { id: 'docker' as const, label: t('tab.apilab'), icon: <TerminalSquare size={14} aria-hidden="true" /> },
     ] : []),
-    { id: 'solutions' as const, label: 'Solutions',  icon: <Lightbulb size={14} aria-hidden="true" /> },
+    { id: 'solutions' as const, label: t('tab.solutions'),  icon: <Lightbulb size={14} aria-hidden="true" /> },
   ];
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)' }}>
-      <div role="tablist" aria-label="QA Inspector" style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', borderBottom: '1px solid var(--glass-border)', flexShrink: 0 }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.04em', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+          <Bug size={14} aria-hidden="true" /> {t('qa.title')}
+        </span>
+        <LanguageToggle compact />
+      </div>
+      <div role="tablist" aria-label={t('qa.title')} style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', flexShrink: 0 }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -225,49 +234,45 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
           <div>
             {requirementsMarkdown
               ? renderMarkdown(requirementsMarkdown)
-              : <p style={{ color: 'var(--text-disabled)' }}>No requirements loaded for this page.</p>}
+              : <p style={{ color: 'var(--text-disabled)' }}>{t('reqs.empty')}</p>}
           </div>
         )}
 
         {activeTab === 'docker' && dockerLab && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem', lineHeight: 1.6 }}>
             <div>
-              <h3 style={{ color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.4rem' }}>🐳 API &amp; Data lab</h3>
+              <h3 style={{ color: 'var(--primary)', fontSize: '1rem', marginBottom: '0.4rem' }}>{t('lab.title')}</h3>
               <p style={{ color: 'var(--text-muted)' }}>
-                This module also ships a <strong style={{ color: 'var(--text-main)' }}>real backend</strong> you run on your own
-                computer — a live API and database — to practise testing that a mocked UI can't teach:
-                HTTP status codes, SQL/data integrity, search, pagination and reviews.
-                <strong style={{ color: 'var(--text-main)' }}> {dockerLab.bugCount} injected bugs</strong>.
+                {t('lab.intro')}{' '}
+                <strong style={{ color: 'var(--text-main)' }}>{t('lab.bugs', { n: dockerLab.bugCount })}</strong>.
               </p>
             </div>
 
             <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '0.9rem 1rem' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Run it in one command</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('lab.runTitle')}</div>
               <ol style={{ margin: 0, paddingLeft: '1.1rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <li>Install <a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Docker Desktop</a> (one time).</li>
-                <li>Download this module's <code style={{ fontFamily: 'monospace' }}>docker-compose.yml</code> into an empty folder.</li>
-                <li>Open a terminal there and run:</li>
+                <li>{t('lab.step1pre')} <a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Docker Desktop</a> {t('lab.step1post')}</li>
+                <li>{t('lab.step2')}</li>
+                <li>{t('lab.step3')}</li>
               </ol>
               <pre style={{ margin: '0.6rem 0 0', background: '#0d1117', color: '#93c5fd', border: '1px solid #1e293b', borderRadius: '6px', padding: '0.6rem 0.8rem', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto' }}>docker compose up</pre>
             </div>
 
             <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Then open</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-disabled)', letterSpacing: '0.05em', marginBottom: '0.4rem', textTransform: 'uppercase' }}>{t('lab.thenOpen')}</div>
               <p style={{ margin: 0, color: 'var(--text-muted)' }}>
-                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:{dockerLab.port}/_lab/requirements</code> — the API's rules<br />
-                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:8080</code> — Adminer (browse the database)
+                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:{dockerLab.port}/_lab/requirements</code> — {t('lab.rules')}<br />
+                <code style={{ fontFamily: 'monospace', color: 'var(--text-main)' }}>http://localhost:8080</code> — {t('lab.adminer')}
               </p>
             </div>
 
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               <a href={dockerLab.composeUrl} download="docker-compose.yml" className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.5rem 0.9rem', textDecoration: 'none' }}>
-                ⬇ Download docker-compose.yml
+                {t('lab.download')}
               </a>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-disabled)', margin: 0 }}>
-              Save it into an empty folder, then run <code style={{ fontFamily: 'monospace' }}>docker compose up</code> there.
-              File your findings with Report Bug, or reveal the tagged answers at
-              <code style={{ fontFamily: 'monospace' }}> /_lab/bugs?key=REVEAL</code>.
+              {t('lab.footer')}<code style={{ fontFamily: 'monospace' }}> /_lab/bugs?key=REVEAL</code>.
             </p>
           </div>
         )}
@@ -275,7 +280,7 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
         {activeTab === 'db' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {Object.keys(dbTables).length === 0 ? (
-              <p style={{ color: 'var(--text-disabled)' }}>No database tables loaded for this view.</p>
+              <p style={{ color: 'var(--text-disabled)' }}>{t('db.empty')}</p>
             ) : (
               Object.entries(dbTables).map(([tableName, data]) => (
                 <div key={tableName}>
@@ -293,7 +298,7 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
           solutionsUnlocked ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {solutions.length === 0
-                ? <p style={{ color: 'var(--text-disabled)' }}>No solutions defined for this page yet.</p>
+                ? <p style={{ color: 'var(--text-disabled)' }}>{t('sol.empty')}</p>
                 : solutions.map(sol => <SolutionCard key={sol.bugId} sol={sol} />)}
             </div>
           ) : <SolutionsLock />
@@ -302,7 +307,7 @@ export const QAInspectorPanel = ({ showDataTabs = true, dockerLab }: { showDataT
         {activeTab === 'api' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {apiEndpoints.length === 0 ? (
-              <p style={{ color: 'var(--text-disabled)' }}>No API endpoints for this view.</p>
+              <p style={{ color: 'var(--text-disabled)' }}>{t('api.empty')}</p>
             ) : (
               apiEndpoints.map((ep, i) => {
                 const methodColor = ep.method === 'GET' ? '#34d399' : ep.method === 'POST' ? '#60a5fa' : ep.method === 'DELETE' ? '#f87171' : '#fbbf24';
