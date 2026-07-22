@@ -131,3 +131,15 @@ services:
       - "4005:4005"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Hotel module (StayEasy): rooms, bookings, pricing, overbooking ──
+  hotel-api:
+    build: ./services/hotel
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4006"
+      DATABASE_URL: postgres://lab:lab@db:5432/hotel
+    ports:
+      - "4006:4006"
+    depends_on:
+      db: { condition: service_healthy }

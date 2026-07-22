@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, BedDouble, CalendarRange, Users, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface RoomType {
   id: string;
@@ -38,7 +38,7 @@ interface Quote {
 
 const HotelInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -240,66 +240,8 @@ Guests search availability, price a stay, and confirm a reservation.
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'HOT-01', title: 'Zero-night stay accepted', location: 'HotelApp.tsx — calculateQuote()', technique: 'Date Validation',
-        buggyCode: 'if (outDate < inDate) { reject }',
-        fixedCode: 'if (outDate <= inDate) { setStatus("Check-out must be after check-in."); return; }',
-        explanation: 'Only a strictly-earlier check-out is rejected, so check-in === check-out (0 nights) passes. Use <=.' },
-      { bugId: 'HOT-02', title: 'Past check-in dates accepted', location: 'HotelApp.tsx — calculateQuote()', technique: 'Date Validation',
-        buggyCode: '// no past-date check',
-        fixedCode: 'const today = new Date(); today.setHours(0,0,0,0);\nif (inDate < today) { setStatus("Check-in is in the past."); return; }',
-        explanation: 'A stay starting yesterday is quoted. Reject check-in dates earlier than today.' },
-      { bugId: 'HOT-03', title: 'Night count is off-by-one', location: 'HotelApp.tsx — calculateQuote()', technique: 'Boundary Value',
-        buggyCode: 'const nights = diffDays(out, in) + 1;',
-        fixedCode: 'const nights = diffDays(out, in); // no +1',
-        explanation: 'Nights are counted inclusively, billing one extra night. The count is check-out minus check-in.' },
-      { bugId: 'HOT-04', title: 'Room occupancy not enforced', location: 'HotelApp.tsx — calculateQuote()', technique: 'Boundary Value',
-        buggyCode: 'void roomType.maxGuests; // never checked',
-        fixedCode: 'if (guestCount > roomType.maxGuests * roomCount) { setStatus("Too many guests for the rooms."); return; }',
-        explanation: 'Six guests fit into one 2-person room. Enforce guests <= maxGuests × rooms.' },
-      { bugId: 'HOT-05', title: 'Overbooking — no overlap check', location: 'HotelApp.tsx — confirmBooking()', technique: 'Logic Error',
-        buggyCode: 'void conflict; // ignored\nsetBookings(prev => [...prev, newBooking]);',
-        fixedCode: 'if (conflict) { setBookingStatus("Room already booked for those dates."); return; }',
-        explanation: 'An overlapping reservation on the same room is ignored, allowing a double-booking. Block on conflict.' },
-      { bugId: 'HOT-06', title: 'Subtotal ignores room count', location: 'HotelApp.tsx — calculateQuote()', technique: 'Logic Error',
-        buggyCode: 'const roomSubtotal = nightly * nights;',
-        fixedCode: 'const roomSubtotal = nightly * nights * roomCount;',
-        explanation: 'Two rooms are billed as one. Multiply by the number of rooms.' },
-      { bugId: 'HOT-07', title: 'Weekend minimum-nights not enforced', location: 'HotelApp.tsx — calculateQuote()', technique: 'Boundary Value',
-        buggyCode: 'if (isWeekend(checkIn) && nights < 2) { /* no-op */ }',
-        fixedCode: 'if (isWeekend(checkIn) && nights < MIN_NIGHTS_WEEKEND) { setStatus("2-night minimum on weekends."); return; }',
-        explanation: 'The weekend minimum is checked but never acted on. Reject stays below the minimum.' },
-      { bugId: 'HOT-08', title: 'Discount applied to resort fees', location: 'HotelApp.tsx — calculateQuote()', technique: 'Logic Error',
-        buggyCode: 'const preDiscount = roomSubtotal + resortFee;\ndiscount = preDiscount * 0.10;',
-        fixedCode: 'discount = roomSubtotal * 0.10; // fees are non-discountable\nconst total = roomSubtotal - discount + resortFee;',
-        explanation: 'The loyalty discount is taken on room + fees. It should apply to the room subtotal only.' },
-      { bugId: 'HOT-09', title: 'Weekend check drifts by timezone', location: 'HotelApp.tsx — isWeekend()', technique: 'Timezone Error',
-        buggyCode: 'const d = new Date(iso); // UTC midnight\nreturn d.getDay() === 0 || d.getDay() === 6;',
-        fixedCode: "const [y,m,dd] = iso.split('-').map(Number);\nconst d = new Date(y, m - 1, dd); // local",
-        explanation: 'UTC parsing shifts the weekday in negative offsets. Build a local date before reading getDay().' },
-      { bugId: 'HOT-10', title: 'Zero rooms / zero guests accepted', location: 'HotelApp.tsx — calculateQuote()', technique: 'Missing Validation',
-        buggyCode: '// roomCount / guestCount never floor-checked',
-        fixedCode: 'if (roomCount < 1 || guestCount < 1) { setStatus("Need at least 1 room and 1 guest."); return; }',
-        explanation: 'A booking for 0 rooms or 0 guests is priced. Require both to be at least 1.' },
-      { bugId: 'HOT-11', title: 'Loyalty discount applied twice', location: 'HotelApp.tsx — calculateQuote()', technique: 'Logic Error',
-        buggyCode: 'discount = pre * 0.10;\ndiscount += (pre - discount) * 0.10;',
-        fixedCode: 'discount = roomSubtotal * 0.10; // once',
-        explanation: 'The 10% is subtracted twice, over-discounting the stay. Apply it a single time.' },
-      { bugId: 'HOT-12', title: '"Modify Search" button is a no-op', location: 'HotelApp.tsx — header button', technique: 'UI Bug',
-        buggyCode: '<button>Modify Search</button> // no onClick',
-        fixedCode: '<button onClick={() => setQuote(null)}>Modify Search</button>',
-        explanation: 'The Modify Search control does nothing. Wire it to clear the current quote and re-open the form.' },
-      { bugId: 'HOT-13', title: 'No maximum-stay cap', location: 'HotelApp.tsx — calculateQuote()', technique: 'Edge Case',
-        buggyCode: 'void MAX_STAY_NIGHTS; // never checked',
-        fixedCode: 'if (nights > MAX_STAY_NIGHTS) { setStatus("Stays are capped at 30 nights."); return; }',
-        explanation: 'A 400-night stay is quoted. Cap the number of nights at the maximum.' },
-      { bugId: 'HOT-14', title: 'Child free-age boundary off-by-one', location: 'HotelApp.tsx — calculateQuote()', technique: 'Boundary Value',
-        buggyCode: 'const childIsFree = age <= 12;',
-        fixedCode: 'const childIsFree = age < CHILD_FREE_UNDER; // strictly under 12',
-        explanation: 'Children under 12 stay free, but <= 12 lets a 12-year-old in free. Use a strict less-than.' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'hotel', bugIds: ['HOT-01', 'HOT-02', 'HOT-03', 'HOT-04', 'HOT-05', 'HOT-06', 'HOT-07', 'HOT-08', 'HOT-09', 'HOT-10', 'HOT-11', 'HOT-12', 'HOT-13', 'HOT-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const inputStyle = { marginBottom: '1rem' };
 
@@ -414,7 +356,15 @@ Guests search availability, price a stay, and confirm a reservation.
 };
 
 export const HotelApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'StayEasy Booking API',
+      port: 4006,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/hotel-docker-compose.yml`,
+    }}
+  >
     <HotelInner />
   </QALayout>
 );
