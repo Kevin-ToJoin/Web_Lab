@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 export const CategoryView = () => {
   const { catName } = useParams<{ catName: string }>();
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,18 +56,7 @@ The \`Products_Table\` below shows the **correct** expected dataset for category
         }
       }
     ]);
-    setSolutions([
-      {
-        bugId: 'CAT-05', title: 'Home Goods filter includes Electronics products',
-        location: 'MockAPI.ts ~line 33', technique: 'Equivalence Partitioning',
-        buggyCode: `if (category === 'Home Goods' && p.category === 'Electronics') {
-  return true; // BUG: Electronics sneaks into Home Goods
-}
-return p.category === category;`,
-        fixedCode:  `return p.category === category;`,
-        explanation: 'A spurious if-block forces all Electronics products to be included when filtering by "Home Goods". Removing the extra branch fixes the filter.',
-      },
-    ]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['CAT-05'] });
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);

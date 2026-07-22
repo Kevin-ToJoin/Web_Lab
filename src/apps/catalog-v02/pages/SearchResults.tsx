@@ -9,7 +9,7 @@ export const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,48 +57,7 @@ export const SearchResults = () => {
       }
     ]);
 
-    setSolutions([
-      {
-        bugId: 'SEARCH-01', title: 'Search returns all products when query is empty',
-        location: 'MockAPI.ts', technique: 'Boundary Value',
-        buggyCode: `if (query) { results = results.filter(...) }\n// Empty string is falsy, skips filter entirely`,
-        fixedCode: `if (query && query.trim().length > 0) { results = results.filter(...) }`,
-        explanation: 'An empty search query bypasses the filter, returning all products instead of zero results. Guard with a trimmed length check.',
-      },
-      {
-        bugId: 'SEARCH-02', title: 'Typo in product name "Laptap Stand" instead of "Laptop Stand"',
-        location: 'mockDatabase.ts — PROD-012', technique: 'Content Bug',
-        buggyCode: `name: 'Laptap Stand', // Typo "Laptap"`,
-        fixedCode: `name: 'Laptop Stand',`,
-        explanation: 'A typo in the mock database causes the product name to appear misspelled in every view — search results, cards, and the product detail page.',
-      },
-      {
-        bugId: 'CAT-08', title: 'Search query rendered as raw HTML (XSS)',
-        location: 'SearchResults.tsx', technique: 'Security (XSS)',
-        buggyCode: `<span dangerouslySetInnerHTML={{ __html: query }} />`,
-        fixedCode: `<span>{query}</span>`,
-        explanation: 'The search term is injected with dangerouslySetInnerHTML, so a query like <b>x</b> or a <script> tag is rendered as live DOM — a stored/reflected XSS vector. Render it as plain text so React escapes it.',
-      },
-      {
-        bugId: 'SEARCH-03', title: 'Searching "error" shows a raw technical stack trace',
-        location: 'MockAPI.ts — getProducts / SearchResults.tsx error state', technique: 'Error Handling',
-        buggyCode: `throw new Error("500 Internal Server Error: JSON parse failed at line 1 column 1");
-// ...
-setError(err.message); // shown verbatim to the user`,
-        fixedCode: `setError('Something went wrong. Please try your search again.');`,
-        explanation: 'The raw exception message — including implementation details like a stack-trace-style string — is displayed directly to the end user.',
-      },
-      {
-        bugId: 'SEARCH-04', title: 'Searching "infinite" hangs the page forever',
-        location: 'MockAPI.ts — getProducts', technique: 'Async / Infinite Loop',
-        buggyCode: `if (search.toLowerCase() === 'infinite') {
-  await delay(9999999); // effectively never resolves
-}`,
-        fixedCode: `// Use a real AbortController-based timeout so a slow request
-// fails gracefully instead of hanging the UI indefinitely.`,
-        explanation: 'A near-10,000-second delay leaves the "Searching database..." state on screen indefinitely with no cancel button or timeout.',
-      },
-    ]);
+    setRemoteSolutions({ app: 'catalog', bugIds: ['SEARCH-01', 'SEARCH-02', 'CAT-08', 'SEARCH-03', 'SEARCH-04'] });
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     MockAPI.getProducts(query)
@@ -111,7 +70,7 @@ setError(err.message); // shown verbatim to the user`,
         setError(err.message);
         setLoading(false);
       });
-  }, [query, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [query, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <div className="animate-fade-in">

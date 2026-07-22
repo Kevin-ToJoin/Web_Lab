@@ -100,13 +100,14 @@ const SolutionCard = ({ sol }: { sol: BugSolution }) => (
 
 // ─── Solutions lock screen ────────────────────────────────────────────────────
 const SolutionsLock = () => {
-  const { unlockSolutions } = useQAPanel();
+  const { unlockSolutions, solutionsLoading, solutionsError } = useQAPanel();
   const { t } = useI18n();
   const [pwd, setPwd] = useState('');
   const [err, setErr] = useState(false);
 
-  const handleUnlock = () => {
-    const ok = unlockSolutions(pwd);
+  const handleUnlock = async () => {
+    setErr(false);
+    const ok = await unlockSolutions(pwd);
     if (!ok) { setErr(true); setPwd(''); }
   };
 
@@ -125,14 +126,17 @@ const SolutionsLock = () => {
           value={pwd}
           onChange={e => { setPwd(e.target.value); setErr(false); }}
           onKeyDown={e => { if (e.key === 'Enter') handleUnlock(); }}
+          disabled={solutionsLoading}
           style={{ flex: 1, border: err ? '1px solid var(--danger)' : undefined }}
           aria-label={t('lock.placeholder')}
         />
-        <button type="button" className="btn btn-primary" style={{ padding: '0.75rem 1rem' }} onClick={handleUnlock} aria-label={t('lock.button')}>
+        <button type="button" className="btn btn-primary" style={{ padding: '0.75rem 1rem' }} onClick={handleUnlock} disabled={solutionsLoading} aria-label={t('lock.button')}>
           <Lightbulb size={16} aria-hidden="true" />
         </button>
       </div>
-      {err && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>{t('lock.wrong')}</p>}
+      {solutionsLoading && <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '0.5rem' }}>…</p>}
+      {err && !solutionsError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>{t('lock.wrong')}</p>}
+      {solutionsError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', marginTop: '0.5rem' }}>{solutionsError}</p>}
     </div>
   );
 };

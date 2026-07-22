@@ -28,3 +28,7 @@ playwright/.cache/
 *.sln
 *.sw?
 .claude/
+
+# Server-gated answer key — NEVER commit to the public repo. Lives in a private
+# repo (ANSWERS_REPO) in production; this local copy is dev-only.
+api/_answers/
