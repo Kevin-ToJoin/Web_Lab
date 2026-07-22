@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { Send } from 'lucide-react';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../../../qa/QAContext';
 import { useBank, INITIAL_ACCOUNTS } from '../context/BankContext';
 import { BankChrome } from './BankChrome';
 
 export const Transfer = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const {
     accounts, fromAcct, setFromAcct, toAcct, setToAcct,
     amount, setAmount, status, handleTransfer,
@@ -79,109 +79,9 @@ URL: \`/bank/transfer\`
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'BNK-01', title: 'Transfer allows the source account to go negative (overdraft)',
-        location: 'BankContext.tsx — applyTransfer()/handleTransfer()', technique: 'Missing Validation',
-        buggyCode: 'return { ...a, balance: a.balance - amt };',
-        fixedCode: 'if (amt > src.balance) { setStatus("Error: Insufficient funds."); return; }',
-        explanation: 'No insufficient-funds check lets a transfer overdraw the source. Validate amt <= balance before applying.',
-      },
-      {
-        bugId: 'BNK-02', title: 'Rounding error makes the debit and credit amounts differ',
-        location: 'BankContext.tsx — applyTransfer()', technique: 'Precision',
-        buggyCode: 'balance: a.balance - amt   // debit raw\nbalance: a.balance + Math.round(amt*100)/100  // credit rounded',
-        fixedCode: 'const cents = Math.round(amt * 100) / 100;\n// debit and credit both use cents',
-        explanation: 'Debit uses the raw amount while credit is rounded, so the two sides diverge. Round both consistently.',
-      },
-      {
-        bugId: 'BNK-04', title: 'Rapid clicks submit the same transfer twice (button not disabled)',
-        location: 'Transfer.tsx — transfer button', technique: 'Race Condition',
-        buggyCode: '<button onClick={handleTransfer}>Transfer</button>',
-        fixedCode: 'const [submitting, setSubmitting] = useState(false);\n<button disabled={submitting} onClick={...}>',
-        explanation: 'The button stays enabled during submission, so a double click sends two transfers. Disable while in flight.',
-      },
-      {
-        bugId: 'BNK-05', title: 'Transfer to the same account is allowed',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Logic Bug',
-        buggyCode: '// no fromAcct !== toAcct check',
-        fixedCode: 'if (fromAcct === toAcct) { setStatus("Error: Cannot transfer to the same account."); return; }',
-        explanation: 'Source and destination can be identical, which is a no-op (or worse with rounding). Reject self-transfers.',
-      },
-      {
-        bugId: 'BNK-06', title: 'Negative transfer amount reverses the direction of funds',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Boundary Value',
-        buggyCode: 'const amt = parseFloat(amount) || 0;  // accepts negatives',
-        fixedCode: 'if (amt <= 0) { setStatus("Error: Amount must be positive."); return; }',
-        explanation: 'A negative amount subtracts a negative (crediting the source and debiting the target). Require amt > 0.',
-      },
-      {
-        bugId: 'BNK-08', title: 'Empty amount field is processed as a zero transfer',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Boundary Value',
-        buggyCode: 'const amt = parseFloat(amount) || 0;',
-        fixedCode: 'if (amount.trim() === "" || isNaN(parseFloat(amount))) { setStatus("Error: Enter an amount."); return; }',
-        explanation: 'An empty field falls back to 0 and is submitted. Reject blank/NaN amounts before processing.',
-      },
-      {
-        bugId: 'BNK-10', title: 'Balance updates optimistically before the transfer is confirmed',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Logic Bug',
-        buggyCode: 'applyTransfer(fromAcct, toAcct, amt);  // before confirmation',
-        fixedCode: 'const ok = await confirmTransfer(...);\nif (ok) applyTransfer(...);',
-        explanation: 'Balances mutate immediately, before the backend confirms. Only apply changes once the transfer is confirmed.',
-      },
-      {
-        bugId: 'BNK-11', title: 'No daily transfer limit is enforced',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Missing Validation',
-        buggyCode: '// no daily total check',
-        fixedCode: 'if (todayTotal + amt > DAILY_LIMIT) { setStatus("Error: Daily limit exceeded."); return; }',
-        explanation: 'Transfers of any size and frequency are accepted. Track the daily total and enforce a cap (see Transfer_Rules: $5,000/day).',
-      },
-      {
-        bugId: 'BNK-12', title: 'Amount field accepts more than two decimal places',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Precision',
-        buggyCode: 'const amt = parseFloat(amount) || 0;  // 10.12345 allowed',
-        fixedCode: 'if (!/^\\d+(\\.\\d{1,2})?$/.test(amount)) { setStatus("Error: Max 2 decimals."); return; }',
-        explanation: 'Amounts like 10.12345 are accepted. Validate to at most two decimal places (whole cents).',
-      },
-      {
-        bugId: 'BNK-13', title: 'Browser back button replays the last transfer',
-        location: 'BankContext.tsx — popstate effect / lastTransfer', technique: 'Stale State',
-        buggyCode: 'window.addEventListener("popstate", () => applyTransfer(lastTransfer...))',
-        fixedCode: 'Do not cache/replay transfers on navigation; rely on idempotent server-side request tokens.',
-        explanation: 'Navigating back re-applies the cached transfer, duplicating it. Never replay completed transactions client-side.',
-      },
-      {
-        bugId: 'BNK-14', title: 'Account number format is not validated',
-        location: 'BankContext.tsx — handleTransfer()', technique: 'Equivalence Partitioning',
-        buggyCode: 'if (!toAcct) { ... }  // no format check',
-        fixedCode: 'if (!/^\\d{4}-\\d{4}-\\d{4}$/.test(toAcct)) { setStatus("Error: Invalid account number."); return; }',
-        explanation: 'Any string is accepted as a destination. Enforce the NNNN-NNNN-NNNN account-number pattern.',
-      },
-      {
-        bugId: 'BNK-18', title: 'Transfer to a nonexistent account silently destroys funds',
-        location: 'BankContext.tsx — applyTransfer()', technique: 'Data Integrity',
-        buggyCode: 'if (a.number === to) { /* credit */ }\n// if no account matches `to`, the debit still ran but the credit lands nowhere',
-        fixedCode: 'const dest = accounts.find(a => a.number === toAcct);\nif (!dest) { setStatus("Error: Destination account not found."); return; }',
-        explanation: 'The debit is applied unconditionally; the credit only lands if a matching account exists. Transfer to 9999-9999-9999 and the money simply vanishes from the system — total balances no longer sum.',
-      },
-      {
-        bugId: 'BNK-19', title: 'Form labels are not associated with their inputs',
-        location: 'Transfer.tsx — form fields', technique: 'Accessibility',
-        buggyCode: '<label className="input-label">Amount</label>\n<input className="input-field" ... />',
-        fixedCode: '<label className="input-label" htmlFor="amount">Amount</label>\n<input id="amount" className="input-field" ... />',
-        explanation: 'No htmlFor/id pairs — clicking a label doesn\'t focus its field and screen readers can\'t announce the field name.',
-      },
-      {
-        bugId: 'BNK-20', title: 'Confirmation message shows an unformatted amount',
-        location: 'BankContext.tsx — handleTransfer() status', technique: 'Content Bug',
-        buggyCode: 'setStatus(`Transfer of $${amt} submitted.`); // "$10.005", "$1e3"…',
-        fixedCode: 'setStatus(`Transfer of $${amt.toFixed(2)} submitted.`);',
-        explanation: 'The raw parsed number is interpolated directly, so "10.005" or exponent notation appears verbatim instead of a currency-formatted value.',
-      },
-    ];
-    setSolutions(solutions);
+    setRemoteSolutions({ app: 'bank', bugIds: ['BNK-01', 'BNK-02', 'BNK-04', 'BNK-05', 'BNK-06', 'BNK-08', 'BNK-10', 'BNK-11', 'BNK-12', 'BNK-13', 'BNK-14', 'BNK-18', 'BNK-19', 'BNK-20'] });
      
-  }, [accounts, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+  }, [accounts, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <BankChrome>

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { History as HistoryIcon } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useBank } from '../context/BankContext';
 import { BankChrome } from './BankChrome';
 
 export const History = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { transactions, accounts } = useBank();
 
   // BUG BNK-09: history is not filtered to the current user's accounts.
@@ -36,38 +36,8 @@ URL: \`/bank/history\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'BNK-09', title: 'Transaction history shows another account\'s transactions',
-        location: 'History.tsx — visibleTransactions', technique: 'Data Integrity',
-        buggyCode: 'const visibleTransactions = transactions;',
-        fixedCode: 'const mine = accounts.filter(a => a.isCurrentUser).map(a => a.number);\nconst visibleTransactions = transactions.filter(t => mine.includes(t.account));',
-        explanation: "History is unfiltered and includes other accounts (e.g. Bob's car payment). Filter to the user's accounts.",
-      },
-      {
-        bugId: 'BNK-21', title: 'Transactions display no date or time',
-        location: 'History.tsx — transaction rows', technique: 'Missing Functionality',
-        buggyCode: '<div>{t.desc}</div>\n<div>{t.account}</div>\n// t.date exists in the data but is never rendered',
-        fixedCode: '<div>{new Date(t.date).toLocaleString()}</div>',
-        explanation: 'The data model carries a date for every transaction (see the DB viewer), but the UI never shows it — a bank history without timestamps is unusable.',
-      },
-      {
-        bugId: 'BNK-22', title: 'History is sorted oldest-first (newest at the bottom)',
-        location: 'BankContext.tsx — applyTransfer() / History.tsx', technique: 'Missing Functionality',
-        buggyCode: 'setTransactions(prev => [...prev, debitTx, creditTx]); // appended at the end',
-        fixedCode: '[...visibleTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())',
-        explanation: 'New transfers are appended to the end of the array and rendered as-is, so the most recent activity is buried at the bottom.',
-      },
-      {
-        bugId: 'BNK-23', title: 'No way to filter history by account',
-        location: 'History.tsx — page header', technique: 'Missing Functionality',
-        buggyCode: '// no account selector — both of Alice\'s accounts (and others\') render mixed together',
-        fixedCode: '<select value={filterAcct} onChange={...}>{myAccounts.map(a => <option .../>)}</select>',
-        explanation: 'Transactions from every account render interleaved with no filter control, making per-account review impossible.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [transactions, accounts, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'bank', bugIds: ['BNK-09', 'BNK-21', 'BNK-22', 'BNK-23'] });
+  }, [transactions, accounts, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   return (
     <BankChrome>

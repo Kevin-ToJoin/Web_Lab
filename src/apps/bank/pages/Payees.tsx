@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Users, Trash2 } from 'lucide-react';
-import { useQAPanel, type BugSolution } from '../../../qa/QAContext';
+import { useQAPanel } from '../../../qa/QAContext';
 import { useBank } from '../context/BankContext';
 import { BankChrome } from './BankChrome';
 
 export const Payees = () => {
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
   const { payees, addPayee, removePayee } = useBank();
 
   const [name, setName] = useState('');
@@ -32,38 +32,8 @@ URL: \`/bank/payees\`
     });
     setApiEndpoints([]);
 
-    const solutions: BugSolution[] = [
-      {
-        bugId: 'BNK-24', title: 'The same account number can be saved as a payee twice',
-        location: 'BankContext.tsx — addPayee()', technique: 'Missing Validation',
-        buggyCode: 'setPayees(prev => [...prev, { id: Date.now(), name, accountNumber }]);\n// no duplicate check',
-        fixedCode: 'if (payees.some(p => p.accountNumber === accountNumber)) {\n  setError("This account is already saved."); return;\n}',
-        explanation: 'Nothing prevents saving the same destination twice — duplicate payees invite wrong-row selection mistakes later.',
-      },
-      {
-        bugId: 'BNK-25', title: 'Payee name accepts whitespace-only input',
-        location: 'BankContext.tsx — addPayee()', technique: 'Boundary Value',
-        buggyCode: 'addPayee(name, accountNumber); // "   " passes untouched',
-        fixedCode: 'if (!name.trim()) { setError("Payee name is required."); return; }',
-        explanation: 'A payee named "   " renders as a blank row. Trim and reject empty names.',
-      },
-      {
-        bugId: 'BNK-26', title: 'Deleting a payee has no confirmation step',
-        location: 'Payees.tsx — trash button', technique: 'UX / Destructive Action',
-        buggyCode: '<button onClick={() => removePayee(p.id)}><Trash2 /></button>',
-        fixedCode: 'if (confirm(`Remove ${p.name}?`)) removePayee(p.id);\n// or an inline undo toast',
-        explanation: 'One accidental click permanently removes a saved payee with no confirmation and no undo.',
-      },
-      {
-        bugId: 'BNK-27', title: 'Payees are lost on page refresh (not persisted)',
-        location: 'BankContext.tsx — payees state', technique: 'Stale State / Persistence',
-        buggyCode: 'const [payees, setPayees] = useState<Payee[]>([...]); // memory only',
-        fixedCode: 'Persist to localStorage on change and rehydrate on mount.',
-        explanation: 'Payees live only in React state — a refresh silently resets the list to the seed data.',
-      },
-    ];
-    setSolutions(solutions);
-  }, [payees, setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'bank', bugIds: ['BNK-24', 'BNK-25', 'BNK-26', 'BNK-27'] });
+  }, [payees, setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const handleAdd = () => {
     // BUG BNK-24 / BNK-25: no duplicate or whitespace validation before saving.
