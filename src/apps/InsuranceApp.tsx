@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Car, Calculator, ShieldCheck, Percent } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface CoverageTier {
   id: string;
@@ -37,7 +37,7 @@ interface Breakdown {
 
 const InsuranceInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [age, setAge] = useState('30');
   const [region, setRegion] = useState('urban');
@@ -297,66 +297,8 @@ Agents price an auto policy from driver, vehicle, and coverage inputs.
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'INS-01', title: 'Young-driver surcharge boundary off-by-one', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Boundary Value',
-        buggyCode: 'if (ageNum <= 25) { youngDriverSurcharge = 150; }',
-        fixedCode: 'if (ageNum < 25) { youngDriverSurcharge = 150; }',
-        explanation: 'The surcharge is for drivers strictly under 25. Using <= 25 wrongly charges a 25-year-old.' },
-      { bugId: 'INS-02', title: 'High-risk surcharge uses OR instead of AND', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Decision Table',
-        buggyCode: 'if (highRisk || smoker) { highRiskSurcharge = 300; }',
-        fixedCode: 'if (highRisk && smoker) { highRiskSurcharge = 300; }\nelse if (highRisk) { highRiskSurcharge = 200; }',
-        explanation: 'The OR triggers the top +$300 tier for either flag alone, making the "high-risk AND smoker" and lower branches unreachable.' },
-      { bugId: 'INS-03', title: 'Region multiplier wrong default', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: "const regionMultiplier = REGION_MULTIPLIERS[region] ?? REGION_MULTIPLIERS['urban'];",
-        fixedCode: 'const regionMultiplier = REGION_MULTIPLIERS[region] ?? 1.0;',
-        explanation: 'An unknown region falls back to the most expensive urban x1.4 instead of a neutral x1.0.' },
-      { bugId: 'INS-04', title: 'Premium coverage priced as Standard', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Boundary Value',
-        buggyCode: "else if (coverageId === 'premium') { baseRate = COVERAGE_TIERS[1].base; }",
-        fixedCode: "else if (coverageId === 'premium') { baseRate = COVERAGE_TIERS[2].base; }",
-        explanation: 'The tier index is off by one, so Premium ($1100) is billed at Standard ($700).' },
-      { bugId: 'INS-05', title: 'Premium can go negative', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: 'const clamped = premium;',
-        fixedCode: 'const clamped = Math.max(0, premium);',
-        explanation: 'A discount larger than the premium yields a negative premium. Clamp the result at 0.' },
-      { bugId: 'INS-06', title: 'Multi-policy discount applied twice', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: 'discounts += multiDisc;\ndiscounts += multiDisc; // twice',
-        fixedCode: 'discounts += multiDisc; // once',
-        explanation: 'The $75 bundle discount is added twice, doubling to $150. Apply it a single time.' },
-      { bugId: 'INS-07', title: 'Senior-safe-driver branch unreachable', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Decision Table',
-        buggyCode: 'if (ageNum >= 25) { discounts += 0; }\nelse if (ageNum >= 65 && !highRisk && !smoker) { discounts += 250; }',
-        fixedCode: 'if (ageNum >= 65 && !highRisk && !smoker) { discounts += 250; }\nelse if (ageNum >= 25) { /* no discount */ }',
-        explanation: 'The broad age >= 25 branch swallows every senior, so the senior-safe discount never runs. Check the specific case first.' },
-      { bugId: 'INS-08', title: 'Loyalty discount boundary off-by-one', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Boundary Value',
-        buggyCode: 'if (loyalty > 5) { discounts += 100; }',
-        fixedCode: 'if (loyalty >= 5) { discounts += 100; }',
-        explanation: 'A 5-year loyal customer should qualify. Using > 5 skips exactly 5 years — use >= 5.' },
-      { bugId: 'INS-09', title: 'Deductible raises premium (inverted)', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: 'deductibleAdjust = deduct * 0.1;\npremium += deductibleAdjust;',
-        fixedCode: 'deductibleAdjust = deduct * 0.1;\npremium -= deductibleAdjust;',
-        explanation: 'A higher deductible means the customer accepts more risk, which should LOWER the premium. The sign is inverted.' },
-      { bugId: 'INS-10', title: 'No maximum-coverage cap', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Edge Case',
-        buggyCode: 'void MAX_VEHICLE_VALUE; // never checked',
-        fixedCode: 'if (vehicle > MAX_VEHICLE_VALUE) { setStatus("Vehicle value exceeds the maximum insurable amount."); return; }',
-        explanation: 'An absurd vehicle value is accepted. Reject values above the maximum insurable amount.' },
-      { bugId: 'INS-11', title: 'Premium not rounded to cents', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: 'const finalPremium = clamped;',
-        fixedCode: 'const finalPremium = Math.round(clamped * 100) / 100;',
-        explanation: 'The raw float drifts (e.g. 830.0000001). Round to two decimal places (cents).' },
-      { bugId: 'INS-12', title: 'Negative age / vehicle value accepted', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Missing Validation',
-        buggyCode: 'if (isNaN(ageNum) || isNaN(vehicle)) { reject }',
-        fixedCode: 'if (isNaN(ageNum) || ageNum < 16 || isNaN(vehicle) || vehicle < 0) { setStatus("Invalid age or vehicle value."); return; }',
-        explanation: 'Only NaN is rejected, so a negative age or negative vehicle value is priced. Add floor checks.' },
-      { bugId: 'INS-13', title: 'Smoker+region branch is dead code', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Decision Table',
-        buggyCode: 'if (highRisk || smoker) { ... }\nelse if (smoker && region === "urban") { ... }',
-        fixedCode: 'if (highRisk && smoker) { ... }\nelse if (smoker && region === "urban") { highRiskSurcharge = 120; }',
-        explanation: 'The first OR branch captures every smoker, so the urban-smoker else-if can never run. Tighten the first branch to AND.' },
-      { bugId: 'INS-14', title: 'Base-rate default fallthrough wrong', location: 'InsuranceApp.tsx — calculatePremium()', technique: 'Logic Error',
-        buggyCode: 'else { baseRate = COVERAGE_TIERS[2].base; } // Premium',
-        fixedCode: 'else { baseRate = COVERAGE_TIERS[0].base; } // safe default: Basic',
-        explanation: 'When no coverage is selected the default applies Premium ($1100) instead of the safe Basic ($400).' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'insurance', bugIds: ['INS-01', 'INS-02', 'INS-03', 'INS-04', 'INS-05', 'INS-06', 'INS-07', 'INS-08', 'INS-09', 'INS-10', 'INS-11', 'INS-12', 'INS-13', 'INS-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const inputStyle = { marginBottom: '1rem' };
 
@@ -471,7 +413,15 @@ Agents price an auto policy from driver, vehicle, and coverage inputs.
 };
 
 export const InsuranceApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'SecureQuote Insurance API',
+      port: 4009,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/insurance-docker-compose.yml`,
+    }}
+  >
     <InsuranceInner />
   </QALayout>
 );

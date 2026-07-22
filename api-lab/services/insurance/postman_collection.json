@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "TestLab 101 — SecureQuote (Insurance module)",
+    "description": "A deliberately-buggy insurance-rating backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4009" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+    { "name": "Products — list", "request": { "method": "GET", "url": "{{baseUrl}}/products" } },
+
+    {
+      "name": "Quote — age 25 gets young-driver rate (INSU-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 1,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"2001-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 20000,\n  \"age\": 25,\n  \"smoker\": false,\n  \"region\": \"standard\",\n  \"prior_claims\": 0\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — smoker \"false\" string applies surcharge (INSU-06)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 1,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"1990-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 20000,\n  \"age\": 40,\n  \"smoker\": \"false\"\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — high-risk region ignored for Home (INSU-12)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 2,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"1990-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 20000,\n  \"age\": 40,\n  \"region\": \"high\"\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — 1 prior claim still gets no-claims discount (INSU-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 1,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"1990-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 20000,\n  \"age\": 40,\n  \"prior_claims\": 1\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — coverage 0 accepted (INSU-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 1,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"1990-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 0,\n  \"age\": 40\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — stack promos → negative premium (INSU-02)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"product_id\": 1,\n  \"user_id\": 7,\n  \"applicant_name\": \"X\",\n  \"dob\": \"1990-01-01\",\n  \"ssn\": \"000\",\n  \"coverage_amount\": 20000,\n  \"age\": 40,\n  \"promo_codes\": [\"WELCOME20\", \"BUNDLE15\", \"LOYAL10\"]\n}" },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    {
+      "name": "Quote — malformed JSON → 500 html (INSU-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"product_id\": 1, " },
+        "url": "{{baseUrl}}/quotes"
+      }
+    },
+    { "name": "Quote — missing id returns 200 null (INSU-08)", "request": { "method": "GET", "url": "{{baseUrl}}/quotes/9999" } },
+    { "name": "Quote — PII leak SSN/DOB (INSU-10)", "request": { "method": "GET", "url": "{{baseUrl}}/quotes/1" } },
+    { "name": "Admin — no authz, all quotes + PII (INSU-11)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/quotes" } }
+  ]
+}
