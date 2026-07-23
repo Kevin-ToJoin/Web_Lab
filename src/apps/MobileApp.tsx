@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Send, Smartphone, CreditCard, Home, Wifi, WifiOff, QrCode, Repeat, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
-import { useQAPanel, type APIEndpoint, type BugSolution } from '../qa/QAContext';
+import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
 
 interface Txn {
   id: number;
@@ -19,7 +19,7 @@ const INITIAL_TXNS: Txn[] = [
 
 const MobileInner = () => {
   const navigate = useNavigate();
-  const { setRequirements, setDbTables, setApiEndpoints, setSolutions } = useQAPanel();
+  const { setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions } = useQAPanel();
 
   const [balance, setBalance] = useState(1234.5);
   const [recipient, setRecipient] = useState('');
@@ -134,66 +134,8 @@ A phone-first wallet: check your balance, send money, and review recent activity
     ];
     setApiEndpoints(endpoints);
 
-    const solutions: BugSolution[] = [
-      { bugId: 'MOB-01', title: 'Send button below 44px touch target', location: 'MobileApp.tsx — Send button', technique: 'Touch Target',
-        buggyCode: 'style={{ height: 28 }}',
-        fixedCode: 'style={{ minHeight: 44 }}',
-        explanation: 'The primary Send button is 28px tall, under the 44px accessible minimum. Give it at least 44px.' },
-      { bugId: 'MOB-02', title: 'Promo banner overflows the viewport', location: 'MobileApp.tsx — promo banner', technique: 'Viewport',
-        buggyCode: '<div style={{ width: 520 }}>',
-        fixedCode: '<div style={{ width: "100%", maxWidth: "100%" }}>',
-        explanation: 'A 520px-wide banner exceeds the 390px frame, causing horizontal scroll. Use a fluid width.' },
-      { bugId: 'MOB-03', title: 'Amount input shows the wrong keyboard', location: 'MobileApp.tsx — #amount', technique: 'Input Type',
-        buggyCode: '<input id="amount" type="text" />',
-        fixedCode: '<input id="amount" type="text" inputMode="decimal" />',
-        explanation: 'A plain text field opens a QWERTY keyboard for numbers. Add inputMode="decimal".' },
-      { bugId: 'MOB-04', title: 'Recipient input is not a tel field', location: 'MobileApp.tsx — #recipient', technique: 'Input Type',
-        buggyCode: '<input id="recipient" type="text" />',
-        fixedCode: '<input id="recipient" type="tel" />',
-        explanation: 'A phone recipient should use type="tel" so mobile shows the dial-pad keyboard.' },
-      { bugId: 'MOB-05', title: 'Icon-only button missing aria-label', location: 'MobileApp.tsx — quick-action button', technique: 'Accessibility',
-        buggyCode: '<button><QrCode /></button>',
-        fixedCode: '<button aria-label="Scan QR"><QrCode /></button>',
-        explanation: 'An icon-only control has no accessible name, so screen readers announce nothing. Add aria-label.' },
-      { bugId: 'MOB-06', title: 'Transfer overdraws to negative balance', location: 'MobileApp.tsx — sendMoney()', technique: 'Boundary Value',
-        buggyCode: 'setBalance(prev => prev - amt); // no cap',
-        fixedCode: 'if (amt > balance) { setStatus("Insufficient funds."); return; }',
-        explanation: 'Sending more than the balance drives it negative. Reject transfers above the available balance.' },
-      { bugId: 'MOB-07', title: 'Double-tap sends the payment twice', location: 'MobileApp.tsx — Send button', technique: 'Logic Error',
-        buggyCode: '<button onClick={sendMoney}> // no in-flight guard',
-        fixedCode: 'const [sending, setSending] = useState(false);\n<button disabled={sending} onClick={...}>',
-        explanation: 'With no guard, a quick double-tap runs the transfer twice. Disable Send while in flight.' },
-      { bugId: 'MOB-08', title: 'Content hidden behind bottom tab bar', location: 'MobileApp.tsx — content container', technique: 'Safe Area',
-        buggyCode: '<div /* no bottom padding */>',
-        fixedCode: '<div style={{ paddingBottom: 72 }}>',
-        explanation: 'The fixed tab bar overlaps the last rows. Pad the content by at least the bar height.' },
-      { bugId: 'MOB-09', title: 'Swipe-to-delete removes the wrong item', location: 'MobileApp.tsx — swipeDelete()', technique: 'Logic Error',
-        buggyCode: 'filter((_, i) => i !== index + 1)',
-        fixedCode: 'filter((_, i) => i !== index)',
-        explanation: 'Deleting index+1 removes the neighbouring transaction. Delete the swiped index itself.' },
-      { bugId: 'MOB-10', title: 'Amounts shown as raw floats', location: 'MobileApp.tsx — balance / amounts', technique: 'Format',
-        buggyCode: '{balance}',
-        fixedCode: '{balance.toLocaleString("en-US", { style: "currency", currency: "USD" })}',
-        explanation: 'A raw 1234.5 reads poorly. Format as a currency string like $1,234.50.' },
-      { bugId: 'MOB-11', title: 'Empty recipient still sends', location: 'MobileApp.tsx — sendMoney()', technique: 'Validation',
-        buggyCode: 'void recipient; // never checked',
-        fixedCode: 'if (!recipient.trim()) { setStatus("Enter a recipient."); return; }',
-        explanation: 'A transfer with no recipient is accepted. Require a non-empty recipient.' },
-      { bugId: 'MOB-12', title: 'Offline indicator never updates', location: 'MobileApp.tsx — offline state', technique: 'Offline/PWA',
-        buggyCode: 'const [offline] = useState(false); // never updated',
-        fixedCode: 'useEffect(() => {\n  const on = () => setOffline(!navigator.onLine);\n  window.addEventListener("offline", on);\n  window.addEventListener("online", on);\n}, []);',
-        explanation: 'The flag is static and ignores navigator.onLine, so it never reflects real connectivity.' },
-      { bugId: 'MOB-13', title: 'Negative amount increases balance', location: 'MobileApp.tsx — sendMoney()', technique: 'Boundary Value',
-        buggyCode: 'setBalance(prev => prev - amt); // amt can be negative',
-        fixedCode: 'if (amt <= 0) { setStatus("Amount must be positive."); return; }',
-        explanation: 'A negative amount is subtracted, adding money. Reject amounts of zero or less.' },
-      { bugId: 'MOB-14', title: 'Recent activity ordered oldest-first', location: 'MobileApp.tsx — sendMoney() / list', technique: 'Logic Error',
-        buggyCode: 'setTxns(prev => [...prev, newTxn]); // appended',
-        fixedCode: 'setTxns(prev => [newTxn, ...prev]); // newest first',
-        explanation: 'New transactions land at the bottom of a top-to-bottom list. Prepend so the newest is on top.' },
-    ];
-    setSolutions(solutions);
-  }, [setRequirements, setDbTables, setApiEndpoints, setSolutions]);
+    setRemoteSolutions({ app: 'mobile', bugIds: ['MOB-01', 'MOB-02', 'MOB-03', 'MOB-04', 'MOB-05', 'MOB-06', 'MOB-07', 'MOB-08', 'MOB-09', 'MOB-10', 'MOB-11', 'MOB-12', 'MOB-13', 'MOB-14'] });
+  }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const fmt = (n: number) => `$${n}`; // BUG MOB-10: raw float, not a formatted currency string.
 
@@ -322,7 +264,15 @@ A phone-first wallet: check your balance, send money, and review recent activity
 };
 
 export const MobileApp = () => (
-  <QALayout>
+  <QALayout
+    showDataTabs={false}
+    dockerLab={{
+      name: 'MobiTap Wallet API',
+      port: 4011,
+      bugCount: 12,
+      composeUrl: `${import.meta.env.BASE_URL}labs/mobile-docker-compose.yml`,
+    }}
+  >
     <MobileInner />
   </QALayout>
 );

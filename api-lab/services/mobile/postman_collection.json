@@ -1,0 +1,63 @@
+{
+  "info": {
+    "name": "TestLab 101 — MobiTap (Mobile Wallet module)",
+    "description": "A deliberately-buggy mobile-wallet backend for QA practice. Each request targets one or more injected bugs. Reveal the tagged answers at GET /_lab/bugs?key=REVEAL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:4011" }],
+  "item": [
+    { "name": "Lab — requirements", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/requirements" } },
+    { "name": "Lab — reveal tagged bugs", "request": { "method": "GET", "url": "{{baseUrl}}/_lab/bugs?key=REVEAL" } },
+    { "name": "Health (correct here)", "request": { "method": "GET", "url": "{{baseUrl}}/health" } },
+
+    { "name": "Wallet — PAN leak, no ownership (WALL-10)", "request": { "method": "GET", "url": "{{baseUrl}}/wallets/1" } },
+    {
+      "name": "Pay — overspend, balance goes negative (WALL-01)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"amount\": 999,\n  \"merchant\": \"BigStore\"\n}" },
+        "url": "{{baseUrl}}/wallets/2/pay"
+      }
+    },
+    {
+      "name": "Pay — negative amount credits wallet (WALL-04)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"amount\": -50,\n  \"merchant\": \"Refund?\"\n}" },
+        "url": "{{baseUrl}}/wallets/1/pay"
+      }
+    },
+    {
+      "name": "Pay — over contactless limit, no PIN (WALL-07)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"amount\": 100,\n  \"merchant\": \"Electronics\"\n}" },
+        "url": "{{baseUrl}}/wallets/1/pay"
+      }
+    },
+    {
+      "name": "Pay — same idem_key twice, double charge (WALL-05)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"amount\": 5,\n  \"merchant\": \"Cafe\",\n  \"idem_key\": \"tap-1\"\n}" },
+        "url": "{{baseUrl}}/wallets/1/pay"
+      }
+    },
+    {
+      "name": "Pay — malformed JSON → 500 html (WALL-09)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"amount\": 5, " },
+        "url": "{{baseUrl}}/wallets/1/pay"
+      }
+    },
+    { "name": "Transaction — missing id returns 200 null (WALL-08)", "request": { "method": "GET", "url": "{{baseUrl}}/transactions/9999" } },
+    { "name": "Reverse — twice → double refund (WALL-12)", "request": { "method": "POST", "url": "{{baseUrl}}/transactions/1/reverse" } },
+    { "name": "Admin — no authz, wallets + PAN (WALL-11)", "request": { "method": "GET", "url": "{{baseUrl}}/admin/wallets" } }
+  ]
+}

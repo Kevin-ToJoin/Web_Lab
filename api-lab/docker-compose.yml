@@ -191,3 +191,15 @@ services:
       - "4010:4010"
     depends_on:
       db: { condition: service_healthy }
+
+  # ── Mobile Wallet module (MobiTap): balance, taps, limits, PIN, PAN ──
+  mobile-api:
+    build: ./services/mobile
+    command: npx tsx src/server.ts
+    environment:
+      PORT: "4011"
+      DATABASE_URL: postgres://lab:lab@db:5432/mobile
+    ports:
+      - "4011:4011"
+    depends_on:
+      db: { condition: service_healthy }
