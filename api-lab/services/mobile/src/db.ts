@@ -18,7 +18,7 @@ export async function waitForDb(retries = 20): Promise<void> {
       await pool.query('SELECT 1');
       return;
     } catch {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   throw new Error('Database not reachable');

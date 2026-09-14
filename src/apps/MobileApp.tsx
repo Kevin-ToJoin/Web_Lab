@@ -1,5 +1,16 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Send, Smartphone, CreditCard, Home, Wifi, WifiOff, QrCode, Repeat, Plus } from 'lucide-react';
+import {
+  ArrowLeft,
+  Send,
+  Smartphone,
+  CreditCard,
+  Home,
+  Wifi,
+  WifiOff,
+  QrCode,
+  Repeat,
+  Plus,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { QALayout } from '../qa/QALayout';
 import { useQAPanel, type APIEndpoint } from '../qa/QAContext';
@@ -50,11 +61,11 @@ const MobileInner = () => {
     // BUG MOB-13 (L4 Boundary): a negative amount is accepted and, because we
     // subtract it, it INCREASES the balance instead of being rejected.
     // (Intended: if (amt <= 0) reject.)
-    setBalance(prev => prev - amt);
+    setBalance((prev) => prev - amt);
 
     // BUG MOB-07 (L5 Logic / double-tap): there is no in-flight guard, so tapping
     // "Send" twice quickly runs the transfer twice. (Intended: disable while sending.)
-    setTxns(prev => [
+    setTxns((prev) => [
       ...prev,
       // BUG MOB-14 (L5 Logic): new transactions are appended to the END of the list
       // and the list is rendered top-to-bottom, so the newest shows at the BOTTOM
@@ -67,7 +78,7 @@ const MobileInner = () => {
   // BUG MOB-09 (L5 Gesture): "swipe to delete" removes the WRONG (adjacent) item
   // because it deletes index + 1 instead of the swiped index (off-by-one).
   const swipeDelete = (index: number) => {
-    setTxns(prev => prev.filter((_, i) => i !== index + 1));
+    setTxns((prev) => prev.filter((_, i) => i !== index + 1));
   };
 
   useEffect(() => {
@@ -95,7 +106,7 @@ A phone-first wallet: check your balance, send money, and review recent activity
         { id: 1, owner: 'you@mobitap.app', balance: 1234.5, currency: 'USD' },
         { id: 2, owner: 'merchant@mobitap.app', balance: 88012.0, currency: 'USD' },
       ],
-      Transactions: INITIAL_TXNS.map(t => ({ id: t.id, name: t.name, amount: t.amount })),
+      Transactions: INITIAL_TXNS.map((t) => ({ id: t.id, name: t.name, amount: t.amount })),
       Contacts: [
         { id: 1, name: 'Alex Rivera', phone: '+1-555-0100' },
         { id: 2, name: 'Sam Chen', phone: '+1-555-0142' },
@@ -106,7 +117,8 @@ A phone-first wallet: check your balance, send money, and review recent activity
       {
         method: 'POST',
         path: '/api/transfer',
-        description: 'Sends money from your account. (Reflects MOB-06: no overdraft cap, and MOB-13: negative amount increases balance.)',
+        description:
+          'Sends money from your account. (Reflects MOB-06: no overdraft cap, and MOB-13: negative amount increases balance.)',
         payloadTemplate: '{\n  "recipient": "+1-555-0100",\n  "amount": 5000\n}',
         handler: (requestBody: string) => {
           try {
@@ -124,7 +136,8 @@ A phone-first wallet: check your balance, send money, and review recent activity
       {
         method: 'GET',
         path: '/api/transactions',
-        description: 'Returns recent activity. (Reflects MOB-14: newest is returned last instead of first, and MOB-10: raw float amounts.)',
+        description:
+          'Returns recent activity. (Reflects MOB-14: newest is returned last instead of first, and MOB-10: raw float amounts.)',
         payloadTemplate: '',
         handler: () => {
           // BUG MOB-14: newest last. BUG MOB-10: raw float amounts, no formatting.
@@ -134,19 +147,43 @@ A phone-first wallet: check your balance, send money, and review recent activity
     ];
     setApiEndpoints(endpoints);
 
-    setRemoteSolutions({ app: 'mobile', bugIds: ['MOB-01', 'MOB-02', 'MOB-03', 'MOB-04', 'MOB-05', 'MOB-06', 'MOB-07', 'MOB-08', 'MOB-09', 'MOB-10', 'MOB-11', 'MOB-12', 'MOB-13', 'MOB-14'] });
+    setRemoteSolutions({
+      app: 'mobile',
+      bugIds: [
+        'MOB-01',
+        'MOB-02',
+        'MOB-03',
+        'MOB-04',
+        'MOB-05',
+        'MOB-06',
+        'MOB-07',
+        'MOB-08',
+        'MOB-09',
+        'MOB-10',
+        'MOB-11',
+        'MOB-12',
+        'MOB-13',
+        'MOB-14',
+      ],
+    });
   }, [setRequirements, setDbTables, setApiEndpoints, setRemoteSolutions]);
 
   const fmt = (n: number) => `$${n}`; // BUG MOB-10: raw float, not a formatted currency string.
 
   return (
     <div className="container animate-fade-in" style={{ paddingBottom: '4rem' }}>
-      <button className="btn btn-secondary" onClick={() => navigate('/')} style={{ marginBottom: '2rem' }}>
+      <button
+        className="btn btn-secondary"
+        onClick={() => navigate('/')}
+        style={{ marginBottom: '2rem' }}
+      >
         <ArrowLeft size={18} /> Back to Hub
       </button>
 
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>MobiTap</h1>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>
+          MobiTap
+        </h1>
         <p>Mobile banking & payments wallet. (Difficulty: Medium)</p>
       </div>
 
@@ -166,17 +203,33 @@ A phone-first wallet: check your balance, send money, and review recent activity
       >
         {/* BUG MOB-08: content container has NO bottom padding for the fixed tab bar. */}
         <div style={{ padding: '1.25rem' }}>
-
           {/* Balance header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1rem',
+            }}
+          >
             <div>
               <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
                 <Smartphone size={14} style={{ verticalAlign: 'middle' }} /> Available balance
               </div>
               {/* BUG MOB-10: raw float via fmt(), e.g. $1234.5 instead of $1,234.50 */}
-              <div data-testid="balance" style={{ fontSize: '2rem', fontWeight: 700 }}>{fmt(balance)}</div>
+              <div data-testid="balance" style={{ fontSize: '2rem', fontWeight: 700 }}>
+                {fmt(balance)}
+              </div>
             </div>
-            <div style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4, opacity: 0.8 }}>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                opacity: 0.8,
+              }}
+            >
               {/* BUG MOB-12: offline flag never updates from navigator.onLine */}
               {offline ? <WifiOff size={14} /> : <Wifi size={14} />}
               {offline ? 'Offline' : 'Online'}
@@ -184,7 +237,17 @@ A phone-first wallet: check your balance, send money, and review recent activity
           </div>
 
           {/* BUG MOB-02: promo banner is a fixed 520px wide, overflowing the 390px frame. */}
-          <div style={{ width: 520, background: 'linear-gradient(90deg,#6d28d9,#2563eb)', color: '#fff', padding: '0.75rem 1rem', borderRadius: 10, marginBottom: '1rem', fontSize: '0.85rem' }}>
+          <div
+            style={{
+              width: 520,
+              background: 'linear-gradient(90deg,#6d28d9,#2563eb)',
+              color: '#fff',
+              padding: '0.75rem 1rem',
+              borderRadius: 10,
+              marginBottom: '1rem',
+              fontSize: '0.85rem',
+            }}
+          >
             Earn 2% cashback on payments this week!
           </div>
 
@@ -193,15 +256,33 @@ A phone-first wallet: check your balance, send money, and review recent activity
             <h2 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Send Money</h2>
 
             <div className="input-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="input-label" htmlFor="recipient">Recipient phone</label>
+              <label className="input-label" htmlFor="recipient">
+                Recipient phone
+              </label>
               {/* BUG MOB-04: should be type="tel" for the dial-pad keyboard. */}
-              <input id="recipient" type="text" className="input-field" value={recipient} onChange={e => setRecipient(e.target.value)} placeholder="+1-555-0100" />
+              <input
+                id="recipient"
+                type="text"
+                className="input-field"
+                value={recipient}
+                onChange={(e) => setRecipient(e.target.value)}
+                placeholder="+1-555-0100"
+              />
             </div>
 
             <div className="input-group" style={{ marginBottom: '0.75rem' }}>
-              <label className="input-label" htmlFor="amount">Amount</label>
+              <label className="input-label" htmlFor="amount">
+                Amount
+              </label>
               {/* BUG MOB-03: no inputMode="decimal", so mobile shows the wrong keyboard. */}
-              <input id="amount" type="text" className="input-field" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+              <input
+                id="amount"
+                type="text"
+                className="input-field"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+              />
             </div>
 
             {/* BUG MOB-01: 28px tall — below the 44px accessible touch target.
@@ -215,7 +296,11 @@ A phone-first wallet: check your balance, send money, and review recent activity
               <Send size={14} /> Send
             </button>
 
-            {status && <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>{status}</p>}
+            {status && (
+              <p style={{ marginTop: '0.6rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                {status}
+              </p>
+            )}
           </div>
 
           {/* Quick actions row of icon buttons */}
@@ -224,27 +309,73 @@ A phone-first wallet: check your balance, send money, and review recent activity
             <button className="btn btn-secondary" style={{ minHeight: 44, width: 44 }}>
               <QrCode size={18} />
             </button>
-            <button className="btn btn-secondary" style={{ minHeight: 44, width: 44 }} aria-label="Repeat last payment">
+            <button
+              className="btn btn-secondary"
+              style={{ minHeight: 44, width: 44 }}
+              aria-label="Repeat last payment"
+            >
               <Repeat size={18} />
             </button>
-            <button className="btn btn-secondary" style={{ minHeight: 44, width: 44 }} aria-label="Add card">
+            <button
+              className="btn btn-secondary"
+              style={{ minHeight: 44, width: 44 }}
+              aria-label="Add card"
+            >
               <Plus size={18} />
             </button>
           </div>
 
           {/* Transactions list */}
           <div className="glass-panel" style={{ padding: '1rem' }}>
-            <h3 style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7, marginBottom: '0.5rem' }}>Recent</h3>
+            <h3
+              style={{
+                fontSize: '0.8rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                opacity: 0.7,
+                marginBottom: '0.5rem',
+              }}
+            >
+              Recent
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {/* BUG MOB-14: rendered in array order (oldest→newest), newest at the bottom. */}
               {txns.map((t, i) => (
-                <div key={t.id} data-testid="txn-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.4rem 0.2rem', borderBottom: '1px solid var(--glass-border)' }}>
+                <div
+                  key={t.id}
+                  data-testid="txn-row"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.4rem 0.2rem',
+                    borderBottom: '1px solid var(--glass-border)',
+                  }}
+                >
                   <span style={{ fontSize: '0.9rem' }}>{t.name}</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {/* BUG MOB-10: raw float amounts. */}
-                    <span style={{ color: t.amount < 0 ? 'var(--text-muted)' : 'var(--success)', fontSize: '0.9rem' }}>{fmt(t.amount)}</span>
+                    <span
+                      style={{
+                        color: t.amount < 0 ? 'var(--text-muted)' : 'var(--success)',
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      {fmt(t.amount)}
+                    </span>
                     {/* BUG MOB-09: swipeDelete removes index+1 (adjacent, wrong item). */}
-                    <button aria-label="Swipe to delete" onClick={() => swipeDelete(i)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+                    <button
+                      aria-label="Swipe to delete"
+                      onClick={() => swipeDelete(i)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ✕
+                    </button>
                   </span>
                 </div>
               ))}
@@ -253,10 +384,26 @@ A phone-first wallet: check your balance, send money, and review recent activity
         </div>
 
         {/* Fixed bottom tab bar */}
-        <div style={{ position: 'sticky', bottom: 0, display: 'flex', justifyContent: 'space-around', padding: '0.75rem 0', background: '#111', color: '#fff' }}>
-          <button aria-label="Home" style={{ background: 'none', border: 'none', color: '#fff' }}><Home size={20} /></button>
-          <button aria-label="Cards" style={{ background: 'none', border: 'none', color: '#fff' }}><CreditCard size={20} /></button>
-          <button aria-label="Pay" style={{ background: 'none', border: 'none', color: '#fff' }}><Send size={20} /></button>
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            display: 'flex',
+            justifyContent: 'space-around',
+            padding: '0.75rem 0',
+            background: '#111',
+            color: '#fff',
+          }}
+        >
+          <button aria-label="Home" style={{ background: 'none', border: 'none', color: '#fff' }}>
+            <Home size={20} />
+          </button>
+          <button aria-label="Cards" style={{ background: 'none', border: 'none', color: '#fff' }}>
+            <CreditCard size={20} />
+          </button>
+          <button aria-label="Pay" style={{ background: 'none', border: 'none', color: '#fff' }}>
+            <Send size={20} />
+          </button>
         </div>
       </div>
     </div>

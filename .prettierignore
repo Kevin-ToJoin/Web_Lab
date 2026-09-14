@@ -1,0 +1,17 @@
+# Build output and dependencies
+dist/
+node_modules/
+**/node_modules/
+package-lock.json
+**/package-lock.json
+
+# Test artifacts
+playwright-report/
+test-results/
+playwright/.cache/
+
+# Generated / imported documents we do not own the formatting of
+admin_100_bugs_guide.html
+
+# Server-gated answer key (gitignored, dev-only)
+api/_answers/

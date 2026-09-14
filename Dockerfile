@@ -17,6 +17,9 @@ RUN npm run build
 # ── Stage 2: serve the build with nginx ─────────────────────────────────────
 FROM nginx:alpine AS serve
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Outside conf.d on purpose: nginx auto-includes conf.d/*.conf into the http
+# context, which would apply this snippet twice and duplicate every header.
+COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1

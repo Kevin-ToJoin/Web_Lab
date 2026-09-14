@@ -49,7 +49,7 @@ window open.**
 
 ## Step 5 — Check that it's working
 
-- **http://localhost:4011/_lab/requirements** — the rules the wallet is *supposed*
+- **http://localhost:4011/_lab/requirements** — the rules the wallet is _supposed_
   to follow (JSON). If you see this, the lab is running. 🎉
 - **http://localhost:8080** — **Adminer** (database browser). Log in with:
   System **PostgreSQL**, Server **db**, Username **lab**, Password **lab**,

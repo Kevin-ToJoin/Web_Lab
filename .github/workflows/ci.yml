@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # Every push, on every branch. A branch filter here is how a repo ends up with
+  # a CI that looks green because it never ran: work on a branch outside the
+  # filter is pushed with nothing checking it.
   push:
-    branches: [main, "claude/**"]
   pull_request:
     branches: [main]
 
@@ -15,6 +17,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history: the Prettier step below diffs against the base commit,
+          # which a shallow clone does not have.
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,6 +36,13 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      # Runs on push AND pull_request. Gating this on pull_request alone would
+      # mean it never executes in a repo worked by pushing straight to a branch.
+      - name: Prettier (changed files only)
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: npm run format:check
 
       - name: Build
         run: npm run build

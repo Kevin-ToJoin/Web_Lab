@@ -15,9 +15,9 @@ services:
     environment:
       POSTGRES_USER: lab
       POSTGRES_PASSWORD: lab
-      POSTGRES_DB: mobile       # the mobile-api creates its own tables on boot
+      POSTGRES_DB: mobile # the mobile-api creates its own tables on boot
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lab -d mobile"]
+      test: ['CMD-SHELL', 'pg_isready -U lab -d mobile']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -26,16 +26,16 @@ services:
     image: ghcr.io/kevin-tojoin/web_lab/mobile-api:latest
     pull_policy: always
     environment:
-      PORT: "4011"
+      PORT: '4011'
       DATABASE_URL: postgres://lab:lab@db:5432/mobile
     ports:
-      - "4011:4011"
+      - '4011:4011'
     depends_on:
       db: { condition: service_healthy }
 
   adminer:
     image: adminer:4
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       db: { condition: service_healthy }

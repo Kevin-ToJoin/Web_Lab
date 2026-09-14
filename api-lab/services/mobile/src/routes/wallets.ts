@@ -53,7 +53,10 @@ walletsRouter.post('/:id/topup', async (req, res) => {
   const w = await query(`SELECT 1 FROM wallets WHERE id = $1`, [id]);
   if (!w.rows[0]) return res.status(404).json({ error: 'wallet not found' });
   await query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [amt, id]);
-  await query(`INSERT INTO transactions (wallet_id, kind, amount) VALUES ($1, 'topup', $2)`, [id, amt]);
+  await query(`INSERT INTO transactions (wallet_id, kind, amount) VALUES ($1, 'topup', $2)`, [
+    id,
+    amt,
+  ]);
   const after = await query<{ balance: number }>(`SELECT balance FROM wallets WHERE id = $1`, [id]);
   res.status(201).json({ wallet_id: id, balance: after.rows[0].balance });
 });

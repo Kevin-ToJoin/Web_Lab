@@ -20,13 +20,13 @@ services:
       POSTGRES_PASSWORD: lab
       POSTGRES_DB: lab
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       # 00 creates the per-module databases; every module self-applies its own
       # schema on startup via src/initDb.ts (idempotent) — no schema mounts.
       - ./db/00-databases.sql:/docker-entrypoint-initdb.d/00-databases.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lab -d lab"]
+      test: ['CMD-SHELL', 'pg_isready -U lab -d lab']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -34,9 +34,9 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 3s
       timeout: 3s
       retries: 20
@@ -44,7 +44,7 @@ services:
   adminer:
     image: adminer:4
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       db: { condition: service_healthy }
 
@@ -53,11 +53,11 @@ services:
     build: ./services/ecommerce
     command: npx tsx src/server.ts
     environment:
-      PORT: "4000"
+      PORT: '4000'
       DATABASE_URL: postgres://lab:lab@db:5432/ecommerce
       REDIS_URL: redis://redis:6379
     ports:
-      - "4000:4000"
+      - '4000:4000'
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -77,10 +77,10 @@ services:
     build: ./services/bank
     command: npx tsx src/server.ts
     environment:
-      PORT: "4001"
+      PORT: '4001'
       DATABASE_URL: postgres://lab:lab@db:5432/bank
     ports:
-      - "4001:4001"
+      - '4001:4001'
     depends_on:
       db: { condition: service_healthy }
 
@@ -89,10 +89,10 @@ services:
     build: ./services/catalog
     command: npx tsx src/server.ts
     environment:
-      PORT: "4002"
+      PORT: '4002'
       DATABASE_URL: postgres://lab:lab@db:5432/catalog
     ports:
-      - "4002:4002"
+      - '4002:4002'
     depends_on:
       db: { condition: service_healthy }
 
@@ -101,10 +101,10 @@ services:
     build: ./services/registration
     command: npx tsx src/server.ts
     environment:
-      PORT: "4003"
+      PORT: '4003'
       DATABASE_URL: postgres://lab:lab@db:5432/registration
     ports:
-      - "4003:4003"
+      - '4003:4003'
     depends_on:
       db: { condition: service_healthy }
 
@@ -113,10 +113,10 @@ services:
     build: ./services/healthcare
     command: npx tsx src/server.ts
     environment:
-      PORT: "4004"
+      PORT: '4004'
       DATABASE_URL: postgres://lab:lab@db:5432/healthcare
     ports:
-      - "4004:4004"
+      - '4004:4004'
     depends_on:
       db: { condition: service_healthy }
 
@@ -125,10 +125,10 @@ services:
     build: ./services/trading
     command: npx tsx src/server.ts
     environment:
-      PORT: "4005"
+      PORT: '4005'
       DATABASE_URL: postgres://lab:lab@db:5432/trading
     ports:
-      - "4005:4005"
+      - '4005:4005'
     depends_on:
       db: { condition: service_healthy }
 
@@ -137,10 +137,10 @@ services:
     build: ./services/hotel
     command: npx tsx src/server.ts
     environment:
-      PORT: "4006"
+      PORT: '4006'
       DATABASE_URL: postgres://lab:lab@db:5432/hotel
     ports:
-      - "4006:4006"
+      - '4006:4006'
     depends_on:
       db: { condition: service_healthy }
 
@@ -149,10 +149,10 @@ services:
     build: ./services/delivery
     command: npx tsx src/server.ts
     environment:
-      PORT: "4007"
+      PORT: '4007'
       DATABASE_URL: postgres://lab:lab@db:5432/delivery
     ports:
-      - "4007:4007"
+      - '4007:4007'
     depends_on:
       db: { condition: service_healthy }
 
@@ -161,10 +161,10 @@ services:
     build: ./services/exam
     command: npx tsx src/server.ts
     environment:
-      PORT: "4008"
+      PORT: '4008'
       DATABASE_URL: postgres://lab:lab@db:5432/exam
     ports:
-      - "4008:4008"
+      - '4008:4008'
     depends_on:
       db: { condition: service_healthy }
 
@@ -173,10 +173,10 @@ services:
     build: ./services/insurance
     command: npx tsx src/server.ts
     environment:
-      PORT: "4009"
+      PORT: '4009'
       DATABASE_URL: postgres://lab:lab@db:5432/insurance
     ports:
-      - "4009:4009"
+      - '4009:4009'
     depends_on:
       db: { condition: service_healthy }
 
@@ -185,10 +185,10 @@ services:
     build: ./services/auth
     command: npx tsx src/server.ts
     environment:
-      PORT: "4010"
+      PORT: '4010'
       DATABASE_URL: postgres://lab:lab@db:5432/auth
     ports:
-      - "4010:4010"
+      - '4010:4010'
     depends_on:
       db: { condition: service_healthy }
 
@@ -197,9 +197,9 @@ services:
     build: ./services/mobile
     command: npx tsx src/server.ts
     environment:
-      PORT: "4011"
+      PORT: '4011'
       DATABASE_URL: postgres://lab:lab@db:5432/mobile
     ports:
-      - "4011:4011"
+      - '4011:4011'
     depends_on:
       db: { condition: service_healthy }

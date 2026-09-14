@@ -18,14 +18,21 @@ transactionsRouter.get('/:id', async (req, res) => {
 transactionsRouter.post('/:id/reverse', async (req, res) => {
   const id = Number(req.params.id);
   const t = await query<{ wallet_id: number; amount: number; kind: string }>(
-    `SELECT wallet_id, amount, kind FROM transactions WHERE id = $1`, [id],
+    `SELECT wallet_id, amount, kind FROM transactions WHERE id = $1`,
+    [id],
   );
   if (!t.rows[0]) return res.status(404).json({ error: 'transaction not found' });
   // A correct reverse: `if (reversed) 409`, then set reversed = true. Neither happens.
-  await query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`,
-    [t.rows[0].amount, t.rows[0].wallet_id]);
-  await query(`INSERT INTO transactions (wallet_id, kind, amount) VALUES ($1, 'reversal', $2)`,
-    [t.rows[0].wallet_id, t.rows[0].amount]);
-  const after = await query<{ balance: number }>(`SELECT balance FROM wallets WHERE id = $1`, [t.rows[0].wallet_id]);
+  await query(`UPDATE wallets SET balance = balance + $1 WHERE id = $2`, [
+    t.rows[0].amount,
+    t.rows[0].wallet_id,
+  ]);
+  await query(`INSERT INTO transactions (wallet_id, kind, amount) VALUES ($1, 'reversal', $2)`, [
+    t.rows[0].wallet_id,
+    t.rows[0].amount,
+  ]);
+  const after = await query<{ balance: number }>(`SELECT balance FROM wallets WHERE id = $1`, [
+    t.rows[0].wallet_id,
+  ]);
   res.json({ reversed_tx: id, refunded: t.rows[0].amount, balance: after.rows[0].balance });
 });

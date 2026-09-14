@@ -46,7 +46,9 @@ Then open [http://localhost:5173](http://localhost:5173) in your browser.
 npm run dev            # Start the Vite dev server (HMR)
 npm run build          # TypeScript project build (tsc -b) + production Vite build
 npm run preview        # Preview the production build locally
-npm run lint           # ESLint static analysis
+npm run lint           # ESLint static analysis (browser, Node, k6 — every runtime)
+npm run format         # Prettier --write on the files this change touches
+npm run format:check   # Same set, check only (what CI runs)
 
 npm run test:unit      # Run Vitest unit tests once
 npm run test:unit:watch# Run Vitest in watch mode
@@ -56,12 +58,29 @@ npm run test:e2e       # Run Playwright end-to-end tests (e2e/)
 npm run test:e2e:ui    # Run Playwright in interactive UI mode
 ```
 
-> **Note on unit tests:** the Vitest suite (in `src/test/`) includes *characterization tests*
+> **Note on unit tests:** the Vitest suite (in `src/test/`) includes _characterization tests_
 > that deliberately assert known bugs **exist**. They document defects such as a Level 1
 > placeholder description, the "Laptap Stand" typo, `addToCart` accepting a negative quantity
 > (Level 3), and `removeFromCart` deleting by position instead of by ID (Level 7). These tests
 > are expected to pass while the bugs are present — they will start failing once the bugs are
 > fixed, which is the intended signal.
+
+### Environment variables
+
+Nothing is required to run the lab locally: `npm run dev` works with no `.env` file. These exist
+for the deployed build and for the server-gated answer key.
+
+| Variable             | Scope  | Default                                                            | What it does                                                                                               |
+| -------------------- | ------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `VITE_BASE`          | build  | `/Lab101/`                                                         | Base path for assets and routes. The Docker image builds with `/` so the app serves at the container root. |
+| `VITE_SOLUTIONS_API` | build  | same-origin `/api/solutions` in dev, the Vercel deployment in prod | Points the Solutions tab at a different answers endpoint.                                                  |
+| `SOLUTIONS_KEY`      | server | `REVEAL`                                                           | The unlock code `api/solutions.ts` requires. Set an instructor-only value for real protection.             |
+| `ANSWERS_REPO`       | server | —                                                                  | Private repo holding the answer key, e.g. `Kevin-ToJoin/Web_Lab-answers`.                                  |
+| `ANSWERS_TOKEN`      | server | —                                                                  | Fine-grained token with read-only Contents access on that repo.                                            |
+| `ANSWERS_REF`        | server | `main`                                                             | Branch to read the answers from.                                                                           |
+
+With no `ANSWERS_REPO`/`ANSWERS_TOKEN`, the function falls back to `api/_answers/<app>.json` — which
+is gitignored and dev-only, so the answers never ship in the public bundle.
 
 ---
 
@@ -97,20 +116,20 @@ publishes the image to GitHub Container Registry on every push to `main`.
 
 ## The Testing Environments
 
-| App | Route | Difficulty | Bug Levels | Bug Count | Focus / Techniques |
-|-----|-------|-----------|-----------|:---------:|--------------------|
-| **Product Catalog** | `/catalog` | Easy | 1–10 | **30** | UI observation, broken links, disabled elements, data integrity — full multi-page flow |
-| **Registration Portal** | `/registration` | Medium | 3–6 | **14** | Multi-step form, state management bugs |
-| **E-commerce Store** | `/ecommerce` | Medium | 3–5 | **14** | Boundary value analysis, equivalence partitioning, stale state in cart & checkout |
-| **Bank Core System** | `/bank` | Hard | 6–8 | **14** | State transitions, session management, async submission/race conditions |
-| **Patient Portal** (Healthcare) | `/healthcare` | Expert | 8–9 | **14** | Decision-table logic, complex date validation, unreachable branches |
-| **Trading Dashboard** | `/trading` | Impossible | 10 | **14** | Race conditions, floating-point cascades, timezone offset bugs |
-| **Hotel Booking** (StayEasy) | `/hotel` | Medium | 3–6 | **14** | Date-range logic, occupancy boundaries, pricing math, overbooking, timezone |
-| **Food Delivery** (QuickBite) | `/delivery` | Medium | 3–5 | **14** | Delivery zones, time windows, order minimums, promo stacking, tip math |
-| **Online Exam** (CertifyHub) | `/exam` | Hard | 5–7 | **14** | Countdown timer/auto-submit, pass-cutoff boundaries, scoring, negative marking |
-| **Insurance Quote** (SecureQuote) | `/insurance` | Expert | 7–9 | **14** | Multi-factor decision tables, premium multipliers, discount clamps |
-| **Account Security** (VaultAuth) | `/auth` | Expert | 6–9 | **14** | Password strength, token expiry, rate-limit lockout, sessions, 2FA, user enumeration |
-| **Mobile Wallet** (MobiTap) | `/mobile` | Medium | 3–5 | **14** | Mobile UX: touch targets, viewport overflow, input types, gestures, a11y, safe areas |
+| App                               | Route           | Difficulty | Bug Levels | Bug Count | Focus / Techniques                                                                     |
+| --------------------------------- | --------------- | ---------- | ---------- | :-------: | -------------------------------------------------------------------------------------- |
+| **Product Catalog**               | `/catalog`      | Easy       | 1–10       |  **30**   | UI observation, broken links, disabled elements, data integrity — full multi-page flow |
+| **Registration Portal**           | `/registration` | Medium     | 3–6        |  **14**   | Multi-step form, state management bugs                                                 |
+| **E-commerce Store**              | `/ecommerce`    | Medium     | 3–5        |  **14**   | Boundary value analysis, equivalence partitioning, stale state in cart & checkout      |
+| **Bank Core System**              | `/bank`         | Hard       | 6–8        |  **14**   | State transitions, session management, async submission/race conditions                |
+| **Patient Portal** (Healthcare)   | `/healthcare`   | Expert     | 8–9        |  **14**   | Decision-table logic, complex date validation, unreachable branches                    |
+| **Trading Dashboard**             | `/trading`      | Impossible | 10         |  **14**   | Race conditions, floating-point cascades, timezone offset bugs                         |
+| **Hotel Booking** (StayEasy)      | `/hotel`        | Medium     | 3–6        |  **14**   | Date-range logic, occupancy boundaries, pricing math, overbooking, timezone            |
+| **Food Delivery** (QuickBite)     | `/delivery`     | Medium     | 3–5        |  **14**   | Delivery zones, time windows, order minimums, promo stacking, tip math                 |
+| **Online Exam** (CertifyHub)      | `/exam`         | Hard       | 5–7        |  **14**   | Countdown timer/auto-submit, pass-cutoff boundaries, scoring, negative marking         |
+| **Insurance Quote** (SecureQuote) | `/insurance`    | Expert     | 7–9        |  **14**   | Multi-factor decision tables, premium multipliers, discount clamps                     |
+| **Account Security** (VaultAuth)  | `/auth`         | Expert     | 6–9        |  **14**   | Password strength, token expiry, rate-limit lockout, sessions, 2FA, user enumeration   |
+| **Mobile Wallet** (MobiTap)       | `/mobile`       | Medium     | 3–5        |  **14**   | Mobile UX: touch targets, viewport overflow, input types, gestures, a11y, safe areas   |
 
 > The hub page (`/`) lists every app with its difficulty badge and level range. The cards above
 > match the difficulty labels shown in-app. Note that the on-hub "Levels 1–2" copy for Product
@@ -256,10 +275,30 @@ No external APIs — everything runs locally against mock data and in-app handle
 ## For instructors
 
 The **Solutions** tab in the QA Inspector is gated behind an unlock code so learners can't peek
-prematurely. The code is **`REVEAL`** (case-insensitive; the in-app hint is *"a single English
-word meaning to expose"*). Share it with learners only after they have attempted the exercises.
+prematurely. The code is **`REVEAL`** (case-insensitive; the in-app hint is _"a single English
+word meaning to expose"_). Share it with learners only after they have attempted the exercises.
 Solutions render as diff-style cards with the buggy code, the fix, the file location, the
 testing technique, and an explanation for each bug.
+
+---
+
+## Repository standard
+
+This repo follows the [MustHave standard](https://michia.vercel.app/musthave) (v1.4.0):
+
+- **CI on every push and PR** — typecheck, ESLint, Prettier, build, Vitest and Playwright
+  (`.github/workflows/ci.yml`). No branch filter on `push`: a filtered CI is one that looks
+  green because it never ran.
+- **Lint over every runtime** — `eslint.config.js` has a block per environment (browser React,
+  Node + TypeScript, Node ESM scripts, k6) instead of excluding the awkward directories. Only
+  build artifacts are ignored.
+- **Format on changed files only** — `npm run format:check` diffs against the base commit and
+  checks just those files. Reformatting the whole repo would touch every file and destroy
+  `git blame`.
+- **Security headers on what is served** — CSP without `'unsafe-inline'` in `script-src`, HSTS,
+  `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`, in
+  `vercel.json` for the deployment and `security-headers.conf` for the Docker image.
+- **No open high/critical advisories** — `npm audit` is clean; Dependabot's PRs get merged.
 
 ---
 

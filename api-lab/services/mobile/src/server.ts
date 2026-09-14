@@ -31,7 +31,10 @@ app.use('/_lab', labRouter);
 // auto-forwards rejected async handlers here.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(500).type('html').send(`<pre>Internal Server Error\n${err.stack ?? err.message}</pre>`);
+  res
+    .status(500)
+    .type('html')
+    .send(`<pre>Internal Server Error\n${err.stack ?? err.message}</pre>`);
 });
 
 const PORT = Number(process.env.PORT) || 4011;
@@ -39,7 +42,7 @@ const PORT = Number(process.env.PORT) || 4011;
 waitForDb()
   .then(initDb)
   .then(() => app.listen(PORT, () => console.log(`MobiTap Wallet API listening on :${PORT}`)))
-  .catch(err => {
+  .catch((err) => {
     console.error('Failed to reach database:', err);
     process.exit(1);
   });
