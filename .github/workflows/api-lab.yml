@@ -1,0 +1,153 @@
+name: API Lab
+
+# The 12 lab backends had no CI of their own. Each declared a `typecheck` script
+# that no workflow ran, and the images do not run it either (they start straight
+# from tsx, which transpiles without checking types) — a declared script nobody
+# executes is the same decorative tooling the lint rule exists to catch.
+#
+# The docker-*.yml workflows only fire on changes under their own service, so a
+# change to one backend never checked the others. This runs over all of them.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Every backend typechecks ──────────────────────────────────────────────
+  typecheck:
+    name: Typecheck ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      # One broken backend should not hide the state of the other eleven.
+      fail-fast: false
+      matrix:
+        service:
+          - auth
+          - bank
+          - catalog
+          - delivery
+          - ecommerce
+          - exam
+          - healthcare
+          - hotel
+          - insurance
+          - mobile
+          - registration
+          - trading
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api-lab/services/${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-lab/services/${{ matrix.service }}
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: api-lab/services/${{ matrix.service }}
+        run: npm run typecheck
+
+  # ── The money paths behave as documented ──────────────────────────────────
+  # These are characterization tests: they assert the injected bugs still
+  # reproduce, because the bugs are the teaching material. A bug that quietly
+  # stops reproducing takes an exercise down with it, and nothing used to notice.
+  money-logic:
+    name: Money-path tests (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: bank
+            port: 4001
+            database: bank
+          - service: ecommerce
+            port: 4000
+            database: ecommerce
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lab
+          POSTGRES_PASSWORD: lab
+          POSTGRES_DB: ${{ matrix.database }}
+        ports:
+          - 5432:5432
+        # Without this the first connection races the container's startup.
+        options: >-
+          --health-cmd "pg_isready -U lab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      # Only ecommerce enqueues fulfilment jobs, but an idle Redis costs nothing
+      # and keeps this job identical for both services.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: api-lab/services/${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: api-lab/services/${{ matrix.service }}
+        run: npm ci
+
+      # The service applies its own schema and seed on boot (src/initDb.ts), so
+      # a plain empty Postgres is all it needs.
+      - name: Start the API
+        working-directory: api-lab/services/${{ matrix.service }}
+        env:
+          PORT: ${{ matrix.port }}
+          DATABASE_URL: postgres://lab:lab@localhost:5432/${{ matrix.database }}
+          REDIS_URL: redis://localhost:6379
+        run: npm start > api.log 2>&1 &
+
+      - name: Wait for /health
+        working-directory: api-lab/services/${{ matrix.service }}
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "http://localhost:${{ matrix.port }}/health" >/dev/null 2>&1; then
+              echo "API is up after ${i}s."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::the API never became healthy"
+          cat api.log
+          exit 1
+
+      - name: Run the money-path tests
+        working-directory: api-lab/services/${{ matrix.service }}
+        env:
+          API_URL: http://localhost:${{ matrix.port }}
+        run: node --test tests/
+
+      # The server log is where a 500 explains itself; without it a failure here
+      # is just a status code.
+      - name: Show the API log
+        if: failure()
+        working-directory: api-lab/services/${{ matrix.service }}
+        run: cat api.log
