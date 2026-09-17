@@ -10,7 +10,7 @@
 // one of these starts failing, either the bug was fixed on purpose — update the
 // test and the lab's KNOWN_BUGS.md together — or something broke by accident.
 //
-// Run: node --test tests/          (needs the API on $API_URL and its Postgres)
+// Run: node --test tests/*.test.mjs          (needs the API on $API_URL and its Postgres)
 //
 // Every assertion is a DELTA on the balances it reads first: the seed only runs
 // on an empty database, so absolute amounts depend on what ran before.
@@ -20,7 +20,7 @@ import assert from 'node:assert/strict';
 const API = process.env.API_URL ?? 'http://localhost:4001';
 
 const ALICE = 1; // 1001-2002-3003
-const BOB = 3;   // 4004-5005-6006
+const BOB = 3; // 4004-5005-6006
 const MISSING_ACCOUNT = 999_999;
 
 const balanceOf = async (id) => {
@@ -100,7 +100,11 @@ test('BANK-08: a transfer to a nonexistent account debits the source and loses t
   const res = await transfer({ fromId: ALICE, toId: MISSING_ACCOUNT, amount: 75 });
   assert.equal(res.status, 404, 'the destination is reported missing');
 
-  assert.equal(await balanceOf(ALICE), from - 75, 'but the debit already happened and is not reversed');
+  assert.equal(
+    await balanceOf(ALICE),
+    from - 75,
+    'but the debit already happened and is not reversed',
+  );
 });
 
 test('BANK-01: a crash after the debit is not rolled back, so the funds vanish', async () => {
@@ -110,5 +114,9 @@ test('BANK-01: a crash after the debit is not rolled back, so the funds vanish',
   assert.equal(res.status, 500, 'settlement throws after debiting');
 
   assert.equal(await balanceOf(ALICE), from - 60, 'source debited');
-  assert.equal(await balanceOf(BOB), to, 'destination never credited — no transaction wraps the two');
+  assert.equal(
+    await balanceOf(BOB),
+    to,
+    'destination never credited — no transaction wraps the two',
+  );
 });

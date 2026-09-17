@@ -11,13 +11,13 @@
 // in api-lab/load/k6-oversell.js; asserting it from a single-threaded test would
 // buy a flaky CI and no extra coverage.
 //
-// Run: node --test tests/      (needs the API on $API_URL, its Postgres and Redis)
+// Run: node --test tests/*.test.mjs      (needs the API on $API_URL, its Postgres and Redis)
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 
 const API = process.env.API_URL ?? 'http://localhost:4000';
 
-const COFFEE = 1;         // 'Premium Coffee Beans', seeded with stock 5
+const COFFEE = 1; // 'Premium Coffee Beans', seeded with stock 5
 const MISSING_PRODUCT = 999_999;
 
 const placeOrder = (body, headers = {}) =>
@@ -52,10 +52,18 @@ test('BUG-API-03: a created order answers 200 with no Location header', async ()
 test('BUG-API-08: the Idempotency-Key is stored but never checked, so a retry buys twice', async () => {
   const headers = { 'idempotency-key': `test-${Date.now()}` };
 
-  const first = await (await placeOrder({ items: [{ productId: COFFEE, quantity: 1 }] }, headers)).json();
-  const second = await (await placeOrder({ items: [{ productId: COFFEE, quantity: 1 }] }, headers)).json();
+  const first = await (
+    await placeOrder({ items: [{ productId: COFFEE, quantity: 1 }] }, headers)
+  ).json();
+  const second = await (
+    await placeOrder({ items: [{ productId: COFFEE, quantity: 1 }] }, headers)
+  ).json();
 
-  assert.notEqual(first.id, second.id, 'the same key creates a second order instead of returning the first');
+  assert.notEqual(
+    first.id,
+    second.id,
+    'the same key creates a second order instead of returning the first',
+  );
 });
 
 test('BUG-DB-03: a failing item leaves the order row behind, with no transaction to undo it', async () => {

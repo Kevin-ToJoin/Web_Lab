@@ -143,7 +143,9 @@ jobs:
         working-directory: api-lab/services/${{ matrix.service }}
         env:
           API_URL: http://localhost:${{ matrix.port }}
-        run: node --test tests/
+        # Glob the files: `node --test tests/` makes Node resolve the directory
+        # as a module instead of walking it.
+        run: node --test tests/*.test.mjs
 
       # The server log is where a 500 explains itself; without it a failure here
       # is just a status code.
