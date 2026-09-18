@@ -2,9 +2,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies first for better layer caching.
-COPY package.json ./
-RUN npm install
+# Install dependencies first for better layer caching. `npm ci` from the lockfile,
+# not `npm install` from the ranges: without it two builds of the same commit can
+# resolve different dependencies, and a patched lockfile never reaches the image.
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # App source (tsx runs the TypeScript directly — no build step).
 COPY tsconfig.json ./
