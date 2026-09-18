@@ -298,7 +298,14 @@ This repo follows the [MustHave standard](https://michia.vercel.app/musthave) (v
 - **Security headers on what is served** — CSP without `'unsafe-inline'` in `script-src`, HSTS,
   `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`, in
   `vercel.json` for the deployment and `security-headers.conf` for the Docker image.
-- **No open high/critical advisories** — `npm audit` is clean; Dependabot's PRs get merged.
+- **No open high/critical advisories** — zero open Dependabot alerts. Note that it counts
+  every lockfile in the repo (13 of them) while `npm audit` at the root reads only one;
+  see [TECH_DEBT.md](TECH_DEBT.md).
+- **The lab backends have CI too** — `.github/workflows/api-lab.yml` typechecks all twelve
+  and runs money-path tests for `bank` and `ecommerce` against a real Postgres and Redis.
+
+What is knowingly left undone — and what is left undone on purpose — is written down in
+[TECH_DEBT.md](TECH_DEBT.md).
 
 ---
 
