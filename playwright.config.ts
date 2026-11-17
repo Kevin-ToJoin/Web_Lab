@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
@@ -25,17 +25,17 @@ export default defineConfig({
   // Web-first assertion timeout (expect(...).toBeVisible() etc.).
   expect: { timeout: 10_000 },
 
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
   // Start the dev server automatically before running E2E tests. The production
   // (Vercel) build serves under /Lab101/, but the specs navigate to bare paths
   // like /hotel, so we run the dev server with VITE_BASE=/ to serve at the root.
+  // The variable goes in `env`, not as a `VAR=x cmd` prefix: that syntax does not exist on Windows.
   webServer: {
-    command: 'VITE_BASE=/ npm run dev',
+    command: 'npm run dev',
+    env: { VITE_BASE: '/' },
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
-})
+});

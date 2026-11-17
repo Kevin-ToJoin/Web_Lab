@@ -1,0 +1,8 @@
+# Prettier exige "endOfLine": "lf". Sin esto, git en Windows (core.autocrlf=true) saca los archivos con CRLF y
+# `npm run format:check` falla en local con archivos que en el CI (Linux) estan bien.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
