@@ -16,6 +16,7 @@
 //   node scripts/prettier-changed.mjs --base=main --check
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // Extensions Prettier has a parser for. Anything else (.sql, .sh, Dockerfile,
 // .png) would abort the run with "No parser could be inferred", so it is the
@@ -105,14 +106,29 @@ function main() {
   console.log(`Prettier ${mode} on ${files.length} changed file(s) against ${base}:`);
   for (const f of files) console.log(`  ${f}`);
 
-  // Inherit stdio so Prettier's own report is the step's output, and let a
-  // non-zero exit propagate: that is what turns the CI step red.
-  execFileSync('npx', ['prettier', mode, '--no-error-on-unmatched-pattern', ...files], {
-    stdio: 'inherit',
-  });
+  // Prettier's own entry point, run with the same node: `npx` cannot be spawned without a shell on
+  // Windows (it is npx.cmd there). Resolved here and not at module load, because the unit tests import
+  // this file under jsdom, where import.meta.url is not a file: URL.
+  const prettierBin = fileURLToPath(
+    new URL('../node_modules/prettier/bin/prettier.cjs', import.meta.url),
+  );
+
+  // Inherit stdio so Prettier's own report is the step's output, and exit with Prettier's code:
+  // that is what turns the CI step red.
+  try {
+    execFileSync(
+      process.execPath,
+      [prettierBin, mode, '--no-error-on-unmatched-pattern', ...files],
+      { stdio: 'inherit' },
+    );
+  } catch (error) {
+    process.exit(error.status ?? 1);
+  }
 }
 
-// Only run when invoked directly, so the tests can import the pure helpers.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+// Only run when invoked directly, so the tests can import the pure helpers. pathToFileURL and not a
+// hand-built `file://` string: on Windows the path has a drive letter and backslashes, the comparison
+// never matched, and the check silently skipped every file.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
